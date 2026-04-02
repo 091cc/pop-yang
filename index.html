@@ -11,46 +11,9 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #000;
-            font-family: 'Arial Black', 'Gadget', sans-serif;
+            background-color: black;
             user-select: none;
             -webkit-user-select: none;
-        }
-
-        #ui-container {
-            position: absolute;
-            top: 20px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        .pop-text {
-            color: white;
-            text-align: center;
-            text-shadow: 
-                -3px -3px 0 #000,  
-                 3px -3px 0 #000,
-                -3px  3px 0 #000,
-                 3px  3px 0 #000,
-                 0    3px 0 #000,
-                 0   -3px 0 #000,
-                 3px  0    0 #000,
-                -3px  0    0 #000;
-        }
-
-        #title {
-            font-size: 60px;
-            margin: 0;
-            letter-spacing: 2px;
-        }
-
-        #score {
-            font-size: 45px;
-            margin-top: -5px;
         }
 
         #pop-img {
@@ -60,34 +23,31 @@
             cursor: pointer;
             display: block;
         }
+
+        #ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 80%;
+            max-height: 20vh;
+            z-index: 10;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-    <div id="ui-container">
-        <h1 id="title" class="pop-text">POPYANG</h1>
-        <div id="score" class="pop-text">0</div>
-    </div>
-
     <img id="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg" alt="Pop Yang">
+    <img id="ui-overlay" src="text_overlay.png" alt="POPYANG_UI">
 
     <script>
         const imgElement = document.getElementById('pop-img');
-        const scoreDisplay = document.getElementById('score');
-
         const normalImg = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
         const popImg = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
 
-        let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
-        scoreDisplay.textContent = count;
-
         function pressDown(e) {
             if (e.type === 'touchstart') e.preventDefault();
-            
-            count++;
-            scoreDisplay.textContent = count;
-            localStorage.setItem('yang_clicks', count);
-
             imgElement.src = popImg;
         }
 
@@ -97,7 +57,6 @@
 
         imgElement.addEventListener('mousedown', pressDown);
         window.addEventListener('mouseup', pressUp);
-        
         imgElement.addEventListener('touchstart', pressDown);
         window.addEventListener('touchend', pressUp);
     </script>
