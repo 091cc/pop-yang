@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pop Yang - 水壺點擊大賽</title>
+    <title>Pop Yang - 按住維持</title>
     <style>
         body {
             display: flex;
@@ -24,6 +24,7 @@
             text-align: center;
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none;
         }
 
         #score {
@@ -45,10 +46,11 @@
             border: 5px solid white;
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.05s ease;
         }
 
-        .active {
-            transform: scale(0.95);
+        #pop-img:active {
+            transform: scale(0.98);
         }
     </style>
 </head>
@@ -78,10 +80,13 @@
             else if (val > 500) rankDisplay.textContent = "等級：開蓋達人 🔥";
             else if (val > 100) rankDisplay.textContent = "等級：資深補水員";
             else if (val > 10) rankDisplay.textContent = "等級：初級裝水生";
+            else rankDisplay.textContent = "等級：裝水中...";
         }
 
-        function doPop(e) {
-            if (e.type === 'touchstart') e.preventDefault();
+        function pressDown(e) {
+            if (e.type === 'touchstart') {
+                e.preventDefault();
+            }
             
             count++;
             scoreDisplay.textContent = count;
@@ -89,16 +94,19 @@
             updateRank(count);
 
             imgElement.src = popImg;
-            imgElement.classList.add('active');
-
-            setTimeout(() => {
-                imgElement.src = normalImg;
-                imgElement.classList.remove('active');
-            }, 100);
         }
 
-        imgElement.addEventListener('mousedown', doPop);
-        imgElement.addEventListener('touchstart', doPop);
+        function pressUp() {
+            imgElement.src = normalImg;
+        }
+
+
+        imgElement.addEventListener('mousedown', pressDown);
+        window.addEventListener('mouseup', pressUp);
+        
+        imgElement.addEventListener('touchstart', pressDown);
+        window.addEventListener('touchend', pressUp);
+
     </script>
 </body>
 </html>
