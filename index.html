@@ -41,33 +41,38 @@
 
     <img id="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg">
 
+    <audio id="pop-sound" src="pop.mp3" preload="auto"></audio>
+
     <script>
         const imgElement = document.getElementById('pop-img');
         const scoreDisplay = document.getElementById('score');
+        const popSound = document.getElementById('pop-sound');
         const normalImg = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
         const popImg = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
 
-        // 核心修正：確保一開始抓到的就是真正的數字數字
         let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
         scoreDisplay.textContent = count;
         
         let isKeyPressed = false;
 
         function addPoint() {
-            count = count + 1; // 明確的加法運算
+            count = count + 1;
             scoreDisplay.textContent = count;
-            localStorage.setItem('yang_clicks', count.toString()); // 儲存為字串
+            localStorage.setItem('yang_clicks', count.toString());
+            
+            // 播放音效邏輯
+            popSound.currentTime = 0;
+            popSound.play().catch(e => {
+                // 忽略瀏覽器自動播放限制導致的錯誤
+            });
         }
 
         function pressDown(e) {
             if (e.type === 'touchstart') e.preventDefault();
-            
-            // 處理鍵盤重複觸發
             if (e.type === 'keydown') {
                 if (isKeyPressed) return;
                 isKeyPressed = true;
             }
-
             imgElement.src = popImg;
             addPoint();
         }
@@ -77,13 +82,10 @@
             imgElement.src = normalImg;
         }
 
-        // 滑鼠與觸控
         imgElement.addEventListener('mousedown', pressDown);
         window.addEventListener('mouseup', pressUp);
         imgElement.addEventListener('touchstart', pressDown);
         window.addEventListener('touchend', pressUp);
-
-        // 鍵盤支援
         window.addEventListener('keydown', pressDown);
         window.addEventListener('keyup', pressUp);
     </script>
