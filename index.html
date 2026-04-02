@@ -2,63 +2,71 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pop Yang - 按住維持</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>POPYANG</title>
     <style>
-        body {
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Arial Black', 'Gadget', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            width: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #5da9ff;
-            font-family: 'Microsoft JhengHei', sans-serif;
-            user-select: none;
-            overflow: hidden;
-        }
-
-        #ui {
-            position: absolute;
-            top: 5%;
-            text-align: center;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
             pointer-events: none;
         }
 
-        #score {
-            font-size: 80px;
-            margin: 0;
+        .pop-text {
+            color: white;
+            text-align: center;
+            text-shadow: 
+                -3px -3px 0 #000,  
+                 3px -3px 0 #000,
+                -3px  3px 0 #000,
+                 3px  3px 0 #000,
+                 0    3px 0 #000,
+                 0   -3px 0 #000,
+                 3px  0    0 #000,
+                -3px  0    0 #000;
         }
 
-        #rank-text {
-            font-size: 24px;
-            background: rgba(0,0,0,0.2);
-            padding: 5px 20px;
-            border-radius: 20px;
+        #title {
+            font-size: 60px;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        #score {
+            font-size: 45px;
+            margin-top: -5px;
         }
 
         #pop-img {
-            max-width: 90vw;
-            max-height: 70vh;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
             cursor: pointer;
-            border: 5px solid white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            transition: transform 0.05s ease;
-        }
-
-        #pop-img:active {
-            transform: scale(0.98);
+            display: block;
         }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <p id="score">0</p>
-        <div id="rank-text">等級：裝水中...</div>
+    <div id="ui-container">
+        <h1 id="title" class="pop-text">POPYANG</h1>
+        <div id="score" class="pop-text">0</div>
     </div>
 
     <img id="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg" alt="Pop Yang">
@@ -66,32 +74,19 @@
     <script>
         const imgElement = document.getElementById('pop-img');
         const scoreDisplay = document.getElementById('score');
-        const rankDisplay = document.getElementById('rank-text');
 
         const normalImg = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
         const popImg = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
 
         let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
         scoreDisplay.textContent = count;
-        updateRank(count);
-
-        function updateRank(val) {
-            if (val > 1000) rankDisplay.textContent = "等級：水壺之神 🏆";
-            else if (val > 500) rankDisplay.textContent = "等級：開蓋達人 🔥";
-            else if (val > 100) rankDisplay.textContent = "等級：資深補水員";
-            else if (val > 10) rankDisplay.textContent = "等級：初級裝水生";
-            else rankDisplay.textContent = "等級：裝水中...";
-        }
 
         function pressDown(e) {
-            if (e.type === 'touchstart') {
-                e.preventDefault();
-            }
+            if (e.type === 'touchstart') e.preventDefault();
             
             count++;
             scoreDisplay.textContent = count;
             localStorage.setItem('yang_clicks', count);
-            updateRank(count);
 
             imgElement.src = popImg;
         }
@@ -100,13 +95,11 @@
             imgElement.src = normalImg;
         }
 
-
         imgElement.addEventListener('mousedown', pressDown);
         window.addEventListener('mouseup', pressUp);
         
         imgElement.addEventListener('touchstart', pressDown);
         window.addEventListener('touchend', pressUp);
-
     </script>
 </body>
 </html>
