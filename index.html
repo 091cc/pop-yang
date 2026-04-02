@@ -37,7 +37,74 @@
             width: 100%;
         }
 
-        /* 這是你要求的 POPYANG 文字樣式 */
+        #popyang {
+            color: white;
+            font-family: 'Arial Black', sans-serif;
+            font-size: 65px;
+            font-weight: 900;
+            margin: 0;
+            line-height: 1;
+            text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, 0 4px 0 #000, 0 -4px 0 #000, 4px 0 0 #000, -4px 0 0 #000;
+        }
+
+        #score {
+            color: white;
+            font-family: 'Arial Black', sans-serif;
+            font-size: 50px;
+            font-weight: 900;
+            margin-top: 10px;
+            text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000, 0 4px 0 #000, 0 -4px 0 #000, 4px 0 0 #000, -4px 0 0 #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-container">
+        <div id="popyang">POPYANG</div>
+        <div id="score">0</div>
+    </div>
+
+    <img id="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg" alt="Pop Yang">
+
+    <script>
+        const imgElement = document.getElementById('pop-img');
+        const scoreDisplay = document.getElementById('score');
+        const normalImg = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
+        const popImg = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
+
+        let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
+        let isKeyPressed = false;
+        scoreDisplay.textContent = count;
+
+        function pressDown(e) {
+            if (e.type === 'touchstart') e.preventDefault();
+            if (e.type === 'keydown') {
+                if (isKeyPressed) return;
+                isKeyPressed = true;
+            }
+            count++;
+            scoreDisplay.textContent = count;
+            localStorage.setItem('yang_clicks', count);
+            imgElement.src = popImg;
+        }
+
+        function pressUp() {
+            isKeyPressed = false;
+            imgElement.src = normalImg;
+        }
+
+        imgElement.addEventListener('mousedown', pressDown);
+        window.addEventListener('mouseup', pressUp);
+        imgElement.addEventListener('touchstart', pressDown);
+        window.addEventListener('touchend', pressUp);
+
+        window.addEventListener('keydown', pressDown);
+        window.addEventListener('keyup', pressUp);
+    </script>
+</body>
+</html>            width: 100%;
+        }
+
         #popyang {
             color: white;
             font-family: 'Arial Black', sans-serif;
@@ -45,7 +112,6 @@
             font-weight: 900;
             margin: 0;
             line-height: 1;
-            /* 黑色粗描邊 */
             text-shadow: 
                 -4px -4px 0 #000,  
                  4px -4px 0 #000,
@@ -63,7 +129,6 @@
             font-size: 50px;
             font-weight: 900;
             margin-top: 10px;
-            /* 黑色粗描邊 */
             text-shadow: 
                 -4px -4px 0 #000,  
                  4px -4px 0 #000,
