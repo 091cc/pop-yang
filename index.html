@@ -52,7 +52,7 @@
         <h2 style="text-align:center; margin-top:0; font-size: 24px;">全球前 10 名</h2>
         <div id="rank-list">載入中...</div>
         <button onclick="document.getElementById('leaderboard-box').style.display='none'" style="width:100%; margin-top:20px; background: #ff7675; color: white;">關閉</button>
-        <p style="font-size: 10px; text-align: center; margin-top: 10px;"><a href="https://091cc.github.io/pop-yang/" style="color: #ccc;">隱私權政策</a></p>
+        <p style="font-size: 10px; text-align: center; margin-top: 10px;"><a href="privacy.html" style="color: #ccc;">隱私權政策</a></p>
     </div>
 
     <script type="module">
@@ -94,7 +94,6 @@
                 currentUser = user;
                 document.getElementById('login-btn').textContent = "👤 " + user.displayName;
                 
-                // 登入後嘗試從雲端同步最高分
                 const userRef = doc(db, "leaderboard", user.uid);
                 const userDoc = await getDoc(userRef);
                 if (userDoc.exists() && userDoc.data().clicks > count) {
@@ -111,9 +110,11 @@
             scoreDisplay.textContent = count;
             localStorage.setItem('yang_clicks', count);
             
-            // 播放音效
-            popSound.currentTime = 0;
-            popSound.play().catch(()=>{});
+            // --- 方法一：優化後的音效重疊邏輯 ---
+            const soundClone = popSound.cloneNode(); 
+            soundClone.play().catch(()=>{});
+            // 播放完畢後自動移除節點，節省記憶體
+            soundClone.onended = function() { this.remove(); };
 
             // 同步至 Firebase
             if (currentUser) {
