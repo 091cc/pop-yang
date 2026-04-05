@@ -11,23 +11,24 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: black; user-select: none; -webkit-user-select: none; font-family: 'Arial Black', sans-serif; }
         #pop-img { width: 100vw; height: 100vh; object-fit: cover; cursor: pointer; display: block; }
         
-        /* 中央 UI 容器 */
         #ui-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; pointer-events: none; width: 100%; }
         #game-logo { width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         #popyang { color: white; font-size: 60px; font-weight: 900; margin: 0; line-height: 1; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         #score { color: white; font-size: 50px; font-weight: 900; margin-top: 5px; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         
-        /* --- 修改重點：將選單移至右上角 --- */
         #menu { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
-        
         button { padding: 10px 15px; border-radius: 12px; border: 3px solid black; font-weight: bold; cursor: pointer; background: white; transition: 0.2s; box-shadow: 0 4px 0 #000; font-family: sans-serif; }
         button:hover { background: #f0f0f0; transform: translateY(-2px); }
         button:active { transform: translateY(2px); box-shadow: 0 0 0 #000; }
 
         /* 彈窗樣式 */
-        #auth-box, #leaderboard-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 25px; z-index: 200; display: none; width: 280px; border: 6px solid #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 25px; z-index: 200; display: none; width: 280px; border: 6px solid #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         input { width: 90%; padding: 10px; margin: 8px 0; border: 2px solid #000; border-radius: 8px; font-size: 16px; }
         .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; color: black; font-family: sans-serif; }
+        
+        /* 底部隱私權 */
+        #privacy-link { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10; }
+        #privacy-link a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 12px; font-family: sans-serif; }
     </style>
 </head>
 <body>
@@ -35,6 +36,201 @@
     <div id="ui-container">
         <img src="logo.png" id="game-logo" onerror="this.style.display='none'">
         <div id="popyang">POPYANG</div>
+        <div id="score">0</div>
+    </div>
+
+    <img id="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg">
+    <audio id="pop-sound" src="pop.mp3" preload="auto"></audio>
+
+    <div id="menu">
+        <button id="open-auth-btn">👤 LOG IN/SIGN UP</button>
+        <button id="rank-btn">🏆 排行榜</button>
+    </div>
+
+    <div id="auth-box" class="modal">
+        <h2 style="text-align:center; margin:0; color:black;">帳號登入</h2>
+        <input type="email" id="auth-email" placeholder="電子郵件">
+        <input type="password" id="auth-password" placeholder="密碼 (至少6位)">
+        <button id="email-login-btn" style="width:100%; background: #4CAF50; color: white;">立即登入</button>
+        <button id="email-reg-btn" style="width:100%; margin-top:5px; background: #2196F3; color: white;">註冊帳號</button>
+        <div style="text-align:center; margin: 10px 0; color: #666; font-size: 12px;">或</div>
+        <button id="google-login-btn" style="width:100%; background: white; display: flex; align-items: center; justify-content: center; gap: 5px; color: black;">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> 使用 Google 登入
+        </button>
+        <button onclick="closeModals()" style="width:100%; margin-top:15px; background: #eee; color: black;">取消</button>
+    </div>
+
+    <div id="user-menu-box" class="modal">
+        <h2 style="text-align:center; margin:0; color:black;">個人設定</h2>
+        <p style="text-align:center; color: #666; font-size: 14px; margin: 10px 0;">修改您的顯示名稱：</p>
+        <input type="text" id="new-nickname" placeholder="輸入新暱稱">
+        <button id="update-name-btn" style="width:100%; background: #4CAF50; color: white;">儲存名稱</button>
+        <hr style="margin: 20px 0;">
+        <button id="logout-btn" style="width:100%; background: #ff7675; color: white;">登出帳號</button>
+        <button onclick="closeModals()" style="width:100%; margin-top:10px; background: #eee; color: black;">關閉</button>
+    </div>
+
+    <div id="leaderboard-box" class="modal">
+        <h2 style="text-align:center; margin:0; color:black;">全球前 10 名</h2>
+        <div id="rank-list" style="max-height: 300px; overflow-y: auto;">載入中...</div>
+        <button onclick="closeModals()" style="width:100%; margin-top:20px; background: #ff7675; color: white;">關閉</button>
+    </div>
+
+    <div id="privacy-link">
+        <a href="privacy.html">隱私權政策</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJYoQH85HDsRsS-Ue69DPfRaJXik7kcEY",
+            authDomain: "pop-yang.firebaseapp.com",
+            projectId: "pop-yang",
+            storageBucket: "pop-yang.firebasestorage.app",
+            messagingSenderId: "787574512577",
+            appId: "1:787574512577:web:72094160cc3da32b86ed40"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore();
+        const provider = new GoogleAuthProvider();
+
+        const scoreDisplay = document.getElementById('score');
+        const imgElement = document.getElementById('pop-img');
+        const popSound = document.getElementById('pop-sound');
+        
+        let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
+        let currentUser = null;
+        scoreDisplay.textContent = count;
+
+        window.closeModals = () => {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        };
+
+        // 按鈕點擊判斷：登入前開登入窗，登入後開設定窗
+        document.getElementById('open-auth-btn').onclick = () => {
+            if (currentUser) {
+                document.getElementById('user-menu-box').style.display = 'block';
+                document.getElementById('new-nickname').value = currentUser.displayName || currentUser.email.split('@')[0];
+            } else {
+                document.getElementById('auth-box').style.display = 'block';
+            }
+        };
+
+        // 登入邏輯
+        document.getElementById('google-login-btn').onclick = () => {
+            signInWithPopup(auth, provider).then(() => closeModals());
+        };
+
+        document.getElementById('email-reg-btn').onclick = () => {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            if(!email || !password) return alert("請填寫完整資訊");
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(() => { alert("註冊成功！"); closeModals(); })
+                .catch(err => alert("失敗: " + err.message));
+        };
+
+        document.getElementById('email-login-btn').onclick = () => {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .then(() => closeModals())
+                .catch(err => alert("失敗: " + err.message));
+        };
+
+        // 登出邏輯
+        document.getElementById('logout-btn').onclick = () => {
+            signOut(auth).then(() => {
+                location.reload(); // 登出後刷新頁面最乾淨
+            });
+        };
+
+        // 修改暱稱邏輯
+        document.getElementById('update-name-btn').onclick = async () => {
+            const newName = document.getElementById('new-nickname').value;
+            if(!newName) return;
+            try {
+                // 更新 Auth 設定檔
+                await updateProfile(auth.currentUser, { displayName: newName });
+                // 更新 Firestore 排行榜資料
+                await setDoc(doc(db, "leaderboard", currentUser.uid), { name: newName }, { merge: true });
+                alert("名稱更新成功！");
+                document.getElementById('open-auth-btn').textContent = "👤 " + newName;
+                closeModals();
+            } catch (err) {
+                alert("更新失敗：" + err.message);
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                const name = user.displayName || user.email.split('@')[0];
+                document.getElementById('open-auth-btn').textContent = "👤 " + name;
+                
+                const userRef = doc(db, "leaderboard", user.uid);
+                const userDoc = await getDoc(userRef);
+                if (userDoc.exists() && userDoc.data().clicks > count) {
+                    count = userDoc.data().clicks;
+                    scoreDisplay.textContent = count;
+                    localStorage.setItem('yang_clicks', count);
+                }
+            } else {
+                currentUser = null;
+                document.getElementById('open-auth-btn').textContent = "👤 LOG IN/SIGN UP";
+            }
+        });
+
+        async function addPoint() {
+            count++;
+            scoreDisplay.textContent = count;
+            localStorage.setItem('yang_clicks', count);
+            
+            const soundClone = popSound.cloneNode(); 
+            soundClone.play().catch(()=>{});
+            soundClone.onended = function() { this.remove(); };
+
+            if (currentUser) {
+                setDoc(doc(db, "leaderboard", currentUser.uid), {
+                    name: currentUser.displayName || currentUser.email.split('@')[0],
+                    clicks: count,
+                    lastUpdated: new Date()
+                }, { merge: true });
+            }
+        }
+
+        document.getElementById('rank-btn').onclick = () => {
+            document.getElementById('leaderboard-box').style.display = 'block';
+            const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10));
+            onSnapshot(q, (snapshot) => {
+                const rankList = document.getElementById('rank-list');
+                rankList.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    rankList.innerHTML += `<div class="rank-item"><span>${data.name}</span><b>${data.clicks}</b></div>`;
+                });
+            });
+        };
+
+        function pressDown(e) {
+            if (e.type === 'touchstart') e.preventDefault();
+            imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
+            addPoint();
+        }
+        function pressUp() { imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg"; }
+
+        imgElement.addEventListener('mousedown', pressDown);
+        window.addEventListener('mouseup', pressUp);
+        imgElement.addEventListener('touchstart', pressDown);
+        window.addEventListener('touchend', pressUp);
+    </script>
+</body>
+</html>        <div id="popyang">POPYANG</div>
         <div id="score">0</div>
     </div>
 
