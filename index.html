@@ -45,6 +45,7 @@
     <div id="menu">
         <button id="open-auth-btn">👤 LOGIN/SIGN UP</button>
         <button id="rank-btn">🏆 Leader Board</button>
+        <button id="lang-btn">🌐 Change Language</button>
     </div>
 
     <div id="auth-box" class="modal">
@@ -76,6 +77,15 @@
         <button id="close-rank" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
     </div>
 
+    <div id="lang-box" class="modal">
+        <h2 style="text-align:center; margin:0; color:black;">Language / 語言</h2>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+            <button class="lang-option" data-lang="en" style="width:100%;">English (英文)</button>
+            <button class="lang-option" data-lang="zh" style="width:100%;">正體中文 (Traditional Chinese)</button>
+        </div>
+        <button id="close-lang" style="width:100%; margin-top:20px; background: #eee; color: black;">Close / 關閉</button>
+    </div>
+
     <div id="privacy-link"><a href="privacy" target="_blank">Privacy Policy</a></div>
 
     <script type="module">
@@ -105,15 +115,73 @@
         let currentUser = null;
         scoreDisplay.textContent = count;
 
+        // --- 語言翻譯設定 ---
+        const translations = {
+            en: {
+                loginBtn: "👤 LOGIN/SIGN UP",
+                rankBtn: "🏆 Leader Board",
+                langBtn: "🌐 Change Language",
+                authTitle: "Account login",
+                rankTitle: "Top 10",
+                privacy: "Privacy Policy",
+                settingTitle: "Setting",
+                saveName: "Save the name"
+            },
+            zh: {
+                loginBtn: "👤 登入 / 註冊",
+                rankBtn: "🏆 排行榜",
+                langBtn: "🌐 切換語言",
+                authTitle: "帳號登入",
+                rankTitle: "世界前 10 名",
+                privacy: "隱私權政策",
+                settingTitle: "個人設定",
+                saveName: "儲存名稱"
+            }
+        };
+
+        const applyLanguage = (lang) => {
+            const t = translations[lang];
+            if (!currentUser) document.getElementById('open-auth-btn').textContent = t.loginBtn;
+            document.getElementById('rank-btn').textContent = t.rankBtn;
+            document.getElementById('lang-btn').textContent = t.langBtn;
+            document.querySelector('#auth-box h2').textContent = t.authTitle;
+            document.querySelector('#leaderboard-box h2').textContent = t.rankTitle;
+            document.querySelector('#user-menu-box h2').textContent = t.settingTitle;
+            document.getElementById('update-name-btn').textContent = t.saveName;
+            document.querySelector('#privacy-link a').textContent = t.privacy;
+        };
+
+        // 初始化語言
+        const savedLang = localStorage.getItem('popyang_lang') || 'en';
+        applyLanguage(savedLang);
+
+        // --- 視窗控制 ---
         const closeModals = () => {
             document.getElementById('auth-box').style.display = 'none';
             document.getElementById('user-menu-box').style.display = 'none';
             document.getElementById('leaderboard-box').style.display = 'none';
+            document.getElementById('lang-box').style.display = 'none';
         };
 
         document.getElementById('close-auth').onclick = closeModals;
         document.getElementById('close-user-menu').onclick = closeModals;
         document.getElementById('close-rank').onclick = closeModals;
+        document.getElementById('close-lang').onclick = closeModals;
+
+        // 開啟語言選單
+        document.getElementById('lang-btn').onclick = () => {
+            document.getElementById('lang-box').style.display = 'block';
+        };
+
+        // 選擇語言
+        document.querySelectorAll('.lang-option').forEach(btn => {
+            btn.onclick = () => {
+                const lang = btn.getAttribute('data-lang');
+                localStorage.setItem('popyang_lang', lang);
+                applyLanguage(lang);
+                closeModals();
+            };
+        });
 
         // --- 個人設定視窗開啟 & 狀態檢查 ---
         document.getElementById('open-auth-btn').onclick = async () => {
@@ -135,7 +203,7 @@
                 } else {
                     nameInput.disabled = false;
                     updateBtn.disabled = false;
-                    updateBtn.textContent = "Save the name";
+                    updateBtn.textContent = translations[localStorage.getItem('popyang_lang') || 'en'].saveName;
                     msg.textContent = "Modify your display name (limited to once)：";
                     msg.style.color = "#666";
                 }
@@ -207,7 +275,8 @@
                 }
             } else {
                 currentUser = null;
-                document.getElementById('open-auth-btn').textContent = "👤 LOG IN/SIGN UP";
+                const currentLang = localStorage.getItem('popyang_lang') || 'en';
+                document.getElementById('open-auth-btn').textContent = translations[currentLang].loginBtn;
             }
         });
 
@@ -227,22 +296,19 @@
         }
 
         function pressDown(e) {
-            if (e.repeat) return; // 防止長按不放作弊
+            if (e.repeat) return;
             if (e.type === 'touchstart') e.preventDefault();
             imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
             addPoint();
         }
         function pressUp() { imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg"; }
 
-        // 滑鼠 & 觸控監聽
         imgElement.addEventListener('mousedown', pressDown);
         window.addEventListener('mouseup', pressUp);
         imgElement.addEventListener('touchstart', pressDown);
         window.addEventListener('touchend', pressUp);
 
-        // 鍵盤監聽
         window.addEventListener('keydown', (e) => {
-            // 排除打字中的情況
             if (e.target.tagName === 'INPUT') return;
             pressDown(e);
         });
