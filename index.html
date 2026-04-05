@@ -20,9 +20,11 @@
         button { padding: 10px 15px; border-radius: 12px; border: 3px solid black; font-weight: bold; cursor: pointer; background: white; transition: 0.2s; box-shadow: 0 4px 0 #000; font-family: sans-serif; }
         button:hover { background: #f0f0f0; transform: translateY(-2px); }
         button:active { transform: translateY(2px); box-shadow: 0 0 0 #000; }
+        button:disabled { background: #ccc !important; cursor: not-allowed; box-shadow: none; transform: none; }
 
         .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 25px; z-index: 200; display: none; width: 280px; border: 6px solid #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         input { width: 90%; padding: 10px; margin: 8px 0; border: 2px solid #000; border-radius: 8px; font-size: 16px; }
+        input:disabled { background: #f9f9f9; color: #999; }
         .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; color: black; font-family: sans-serif; }
         
         #privacy-link { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10; }
@@ -60,7 +62,7 @@
 
     <div id="user-menu-box" class="modal">
         <h2 style="text-align:center; margin:0; color:black;">個人設定</h2>
-        <p style="text-align:center; color: #666; font-size: 14px; margin: 10px 0;">修改您的顯示名稱：</p>
+        <p id="name-status-msg" style="text-align:center; color: #666; font-size: 14px; margin: 10px 0;">修改您的顯示名稱：</p>
         <input type="text" id="new-nickname" placeholder="輸入新暱稱">
         <button id="update-name-btn" style="width:100%; background: #4CAF50; color: white;">儲存名稱</button>
         <hr style="margin: 20px 0;">
@@ -103,7 +105,6 @@
         let currentUser = null;
         scoreDisplay.textContent = count;
 
-        // --- 修復：關閉彈窗的邏輯 ---
         const closeModals = () => {
             document.getElementById('auth-box').style.display = 'none';
             document.getElementById('user-menu-box').style.display = 'none';
@@ -114,16 +115,56 @@
         document.getElementById('close-user-menu').onclick = closeModals;
         document.getElementById('close-rank').onclick = closeModals;
 
-        // --- 按鈕事件 ---
-        document.getElementById('open-auth-btn').onclick = () => {
+        // --- 改名邏輯整合 ---
+        document.getElementById('open-auth-btn').onclick = async () => {
             if (currentUser) {
                 document.getElementById('user-menu-box').style.display = 'block';
-                document.getElementById('new-nickname').value = currentUser.displayName || currentUser.email.split('@')[0];
+                const nameInput = document.getElementById('new-nickname');
+                const updateBtn = document.getElementById('update-name-btn');
+                const msg = document.getElementById('name-status-msg');
+                
+                nameInput.value = currentUser.displayName || currentUser.email.split('@')[0];
+
+                // 從資料庫檢查是否已改名過
+                const userDoc = await getDoc(doc(db, "leaderboard", currentUser.uid));
+                if (userDoc.exists() && userDoc.data().nameChanged === true) {
+                    nameInput.disabled = true;
+                    updateBtn.disabled = true;
+                    updateBtn.textContent = "已修改過名稱";
+                    msg.textContent = "您已使用過唯一的修改機會";
+                    msg.style.color = "red";
+                } else {
+                    nameInput.disabled = false;
+                    updateBtn.disabled = false;
+                    updateBtn.textContent = "儲存名稱";
+                    msg.textContent = "修改您的顯示名稱 (限一次)：";
+                    msg.style.color = "#666";
+                }
             } else {
                 document.getElementById('auth-box').style.display = 'block';
             }
         };
 
+        document.getElementById('update-name-btn').onclick = async () => {
+            const newName = document.getElementById('new-nickname').value;
+            if(!newName || !currentUser) return;
+            if(newName.length > 15) return alert("名字太長囉！");
+
+            try {
+                // 更新 Auth
+                await updateProfile(auth.currentUser, { displayName: newName });
+                // 更新 Firestore 並標記已改名
+                await setDoc(doc(db, "leaderboard", currentUser.uid), { 
+                    name: newName,
+                    nameChanged: true 
+                }, { merge: true });
+                
+                alert("名稱更新成功！");
+                location.reload();
+            } catch (err) { alert(err.message); }
+        };
+
+        // --- 登入/登出事件 ---
         document.getElementById('google-login-btn').onclick = () => {
             signInWithPopup(auth, provider).then(() => closeModals()).catch(err => alert(err.message));
         };
@@ -132,35 +173,20 @@
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             if(!email || !password) return alert("請填寫完整資訊");
-            createUserWithEmailAndPassword(auth, email, password)
-                .then(() => closeModals())
-                .catch(err => alert(err.message));
+            createUserWithEmailAndPassword(auth, email, password).then(() => closeModals()).catch(err => alert(err.message));
         };
 
         document.getElementById('email-login-btn').onclick = () => {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
-            signInWithEmailAndPassword(auth, email, password)
-                .then(() => closeModals())
-                .catch(err => alert(err.message));
+            signInWithEmailAndPassword(auth, email, password).then(() => closeModals()).catch(err => alert(err.message));
         };
 
         document.getElementById('logout-btn').onclick = () => {
             signOut(auth).then(() => location.reload());
         };
 
-        document.getElementById('update-name-btn').onclick = async () => {
-            const newName = document.getElementById('new-nickname').value;
-            if(!newName || !currentUser) return;
-            try {
-                await updateProfile(auth.currentUser, { displayName: newName });
-                await setDoc(doc(db, "leaderboard", currentUser.uid), { name: newName }, { merge: true });
-                alert("名稱更新成功！");
-                location.reload();
-            } catch (err) { alert(err.message); }
-        };
-
-        // --- 排行榜邏輯 ---
+        // --- 排行榜 ---
         document.getElementById('rank-btn').onclick = () => {
             document.getElementById('leaderboard-box').style.display = 'block';
             const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10));
@@ -186,6 +212,9 @@
                     scoreDisplay.textContent = count;
                     localStorage.setItem('yang_clicks', count);
                 }
+            } else {
+                currentUser = null;
+                document.getElementById('open-auth-btn').textContent = "👤 LOG IN/SIGN UP";
             }
         });
 
