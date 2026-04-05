@@ -43,40 +43,40 @@
     <audio id="pop-sound" src="pop.mp3" preload="auto"></audio>
 
     <div id="menu">
-        <button id="open-auth-btn">👤 LOG IN/SIGN UP</button>
-        <button id="rank-btn">🏆 排行榜</button>
+        <button id="open-auth-btn">👤 LOGIN/SIGN UP</button>
+        <button id="rank-btn">🏆 Leader Board</button>
     </div>
 
     <div id="auth-box" class="modal">
-        <h2 style="text-align:center; margin:0; color:black;">帳號登入</h2>
-        <input type="email" id="auth-email" placeholder="電子郵件">
-        <input type="password" id="auth-password" placeholder="密碼 (至少6位)">
-        <button id="email-login-btn" style="width:100%; background: #4CAF50; color: white;">立即登入</button>
-        <button id="email-reg-btn" style="width:100%; margin-top:5px; background: #2196F3; color: white;">註冊帳號</button>
-        <div style="text-align:center; margin: 10px 0; color: #666; font-size: 12px;">或</div>
+        <h2 style="text-align:center; margin:0; color:black;">Account login</h2>
+        <input type="email" id="auth-email" placeholder="e-mail">
+        <input type="password" id="auth-password" placeholder="password (At least 6 characters)">
+        <button id="email-login-btn" style="width:100%; background: #4CAF50; color: white;">Login</button>
+        <button id="email-reg-btn" style="width:100%; margin-top:5px; background: #2196F3; color: white;">Sign up</button>
+        <div style="text-align:center; margin: 10px 0; color: #666; font-size: 12px;">or</div>
         <button id="google-login-btn" style="width:100%; background: white; display: flex; align-items: center; justify-content: center; gap: 5px; color: black;">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> 使用 Google 登入
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Use Google to log in
         </button>
-        <button id="close-auth" style="width:100%; margin-top:15px; background: #eee; color: black;">取消</button>
+        <button id="close-auth" style="width:100%; margin-top:15px; background: #eee; color: black;">Cancel</button>
     </div>
 
     <div id="user-menu-box" class="modal">
-        <h2 style="text-align:center; margin:0; color:black;">個人設定</h2>
-        <p id="name-status-msg" style="text-align:center; color: #666; font-size: 14px; margin: 10px 0;">修改您的顯示名稱 (限一次)：</p>
-        <input type="text" id="new-nickname" placeholder="輸入新暱稱">
-        <button id="update-name-btn" style="width:100%; background: #4CAF50; color: white;">儲存名稱</button>
+        <h2 style="text-align:center; margin:0; color:black;">Setting</h2>
+        <p id="name-status-msg" style="text-align:center; color: #666; font-size: 14px; margin: 10px 0;">Modify your display name (limited to once)：</p>
+        <input type="text" id="new-nickname" placeholder="Enter a new nickname">
+        <button id="update-name-btn" style="width:100%; background: #4CAF50; color: white;">Save the name</button>
         <hr style="margin: 20px 0;">
-        <button id="logout-btn" style="width:100%; background: #ff7675; color: white;">登出帳號</button>
-        <button id="close-user-menu" style="width:100%; margin-top:10px; background: #eee; color: black;">關閉</button>
+        <button id="logout-btn" style="width:100%; background: #ff7675; color: white;">Logout</button>
+        <button id="close-user-menu" style="width:100%; margin-top:10px; background: #eee; color: black;">Close</button>
     </div>
 
     <div id="leaderboard-box" class="modal">
-        <h2 style="text-align:center; margin:0; color:black;">全球前 10 名</h2>
-        <div id="rank-list" style="max-height: 300px; overflow-y: auto;">載入中...</div>
-        <button id="close-rank" style="width:100%; margin-top:20px; background: #ff7675; color: white;">關閉</button>
+        <h2 style="text-align:center; margin:0; color:black;">Top 10</h2>
+        <div id="rank-list" style="max-height: 300px; overflow-y: auto;">Loading...</div>
+        <button id="close-rank" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
     </div>
 
-    <div id="privacy-link"><a href="pop-yang/privacy">隱私權政策</a></div>
+    <div id="privacy-link"><a href="pop-yang/privacy">Privacy policy</a></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
@@ -129,14 +129,14 @@
                 if (userDoc.exists() && userDoc.data().nameChanged === true) {
                     nameInput.disabled = true;
                     updateBtn.disabled = true;
-                    updateBtn.textContent = "已修改過名稱";
+                    updateBtn.textContent = "The name has been modified.";
                     msg.textContent = "You have already changed the display name.";
                     msg.style.color = "red";
                 } else {
                     nameInput.disabled = false;
                     updateBtn.disabled = false;
-                    updateBtn.textContent = "儲存名稱";
-                    msg.textContent = "修改您的顯示名稱 (限一次)：";
+                    updateBtn.textContent = "Save the name";
+                    msg.textContent = "Modify your display name (limited to once)：";
                     msg.style.color = "#666";
                 }
             } else {
@@ -147,7 +147,7 @@
         document.getElementById('update-name-btn').onclick = async () => {
             const newName = document.getElementById('new-nickname').value;
             if(!newName || !currentUser) return;
-            if(newName.length > 15) return alert("名字太長囉！");
+            if(newName.length > 15) return alert("The name is too long!");
 
             try {
                 await updateProfile(auth.currentUser, { displayName: newName });
@@ -155,7 +155,7 @@
                     name: newName,
                     nameChanged: true 
                 }, { merge: true });
-                alert("名稱更新成功！");
+                alert("The name has been updated successfully!");
                 location.reload();
             } catch (err) { alert(err.message); }
         };
@@ -167,7 +167,7 @@
         document.getElementById('email-reg-btn').onclick = () => {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
-            if(!email || !password) return alert("請填寫完整資訊");
+            if(!email || !password) return alert("Please fill in the complete information.");
             createUserWithEmailAndPassword(auth, email, password).then(() => closeModals()).catch(err => alert(err.message));
         };
         document.getElementById('email-login-btn').onclick = () => {
