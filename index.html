@@ -62,7 +62,7 @@
 
     <div id="user-menu-box" class="modal">
         <h2 style="text-align:center; margin:0; color:black;">個人設定</h2>
-        <p id="name-status-msg" style="text-align:center; color: #666; font-size: 14px; margin: 10px 0;">修改您的顯示名稱：</p>
+        <p id="name-status-msg" style="text-align:center; color: #666; font-size: 14px; margin: 10px 0;">修改您的顯示名稱 (限一次)：</p>
         <input type="text" id="new-nickname" placeholder="輸入新暱稱">
         <button id="update-name-btn" style="width:100%; background: #4CAF50; color: white;">儲存名稱</button>
         <hr style="margin: 20px 0;">
@@ -115,7 +115,7 @@
         document.getElementById('close-user-menu').onclick = closeModals;
         document.getElementById('close-rank').onclick = closeModals;
 
-        // --- 改名邏輯整合 ---
+        // --- 個人設定視窗開啟 & 狀態檢查 ---
         document.getElementById('open-auth-btn').onclick = async () => {
             if (currentUser) {
                 document.getElementById('user-menu-box').style.display = 'block';
@@ -125,13 +125,12 @@
                 
                 nameInput.value = currentUser.displayName || currentUser.email.split('@')[0];
 
-                // 從資料庫檢查是否已改名過
                 const userDoc = await getDoc(doc(db, "leaderboard", currentUser.uid));
                 if (userDoc.exists() && userDoc.data().nameChanged === true) {
                     nameInput.disabled = true;
                     updateBtn.disabled = true;
                     updateBtn.textContent = "已修改過名稱";
-                    msg.textContent = "您已使用過唯一的修改機會";
+                    msg.textContent = "您已用完唯一的修改機會";
                     msg.style.color = "red";
                 } else {
                     nameInput.disabled = false;
@@ -151,37 +150,31 @@
             if(newName.length > 15) return alert("名字太長囉！");
 
             try {
-                // 更新 Auth
                 await updateProfile(auth.currentUser, { displayName: newName });
-                // 更新 Firestore 並標記已改名
                 await setDoc(doc(db, "leaderboard", currentUser.uid), { 
                     name: newName,
                     nameChanged: true 
                 }, { merge: true });
-                
                 alert("名稱更新成功！");
                 location.reload();
             } catch (err) { alert(err.message); }
         };
 
-        // --- 登入/登出事件 ---
+        // --- 帳號功能 ---
         document.getElementById('google-login-btn').onclick = () => {
             signInWithPopup(auth, provider).then(() => closeModals()).catch(err => alert(err.message));
         };
-
         document.getElementById('email-reg-btn').onclick = () => {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             if(!email || !password) return alert("請填寫完整資訊");
             createUserWithEmailAndPassword(auth, email, password).then(() => closeModals()).catch(err => alert(err.message));
         };
-
         document.getElementById('email-login-btn').onclick = () => {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
             signInWithEmailAndPassword(auth, email, password).then(() => closeModals()).catch(err => alert(err.message));
         };
-
         document.getElementById('logout-btn').onclick = () => {
             signOut(auth).then(() => location.reload());
         };
@@ -234,16 +227,26 @@
         }
 
         function pressDown(e) {
+            if (e.repeat) return; // 防止長按不放作弊
             if (e.type === 'touchstart') e.preventDefault();
             imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
             addPoint();
         }
         function pressUp() { imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg"; }
 
+        // 滑鼠 & 觸控監聽
         imgElement.addEventListener('mousedown', pressDown);
         window.addEventListener('mouseup', pressUp);
         imgElement.addEventListener('touchstart', pressDown);
         window.addEventListener('touchend', pressUp);
+
+        // 鍵盤監聽
+        window.addEventListener('keydown', (e) => {
+            // 排除打字中的情況
+            if (e.target.tagName === 'INPUT') return;
+            pressDown(e);
+        });
+        window.addEventListener('keyup', pressUp);
     </script>
 </body>
 </html>
