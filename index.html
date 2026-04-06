@@ -2,13 +2,11 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="google-site-verification" content="dD8BLSdmLGFWDNZ_lxgi28iqK6gn1OapISj1-YDAPO4" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>POPYANG</title>
     <link rel="icon" type="image/png" href="logo.png">
 
     <style>
-        /* 核心效能優化 */
         * {
             -webkit-tap-highlight-color: transparent;
             touch-action: none; 
@@ -23,26 +21,24 @@
             font-family: 'Arial Black', sans-serif; 
         }
 
-        /* 終極優化：使用背景圖切換代替 <img> 標籤 */
+        /* 遊戲背景層：設為 z-index: 1 */
         #game-target {
             position: absolute;
+            top: 0; left: 0;
             width: 100vw;
             height: 100vh;
             cursor: pointer;
             z-index: 1;
-            /* 預設閉嘴圖 */
             background: url('https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg') center/cover no-repeat;
-            /* 強制硬體加速 */
             transform: translateZ(0);
-            backface-visibility: hidden;
             will-change: background-image;
         }
 
-        /* 點擊時張嘴 */
         #game-target.active {
             background-image: url('https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg');
         }
 
+        /* UI 與選單層：必須在最上方 z-index: 10+ */
         #ui-container { 
             position: absolute; top: 20px; left: 50%; 
             transform: translateX(-50%); display: flex; 
@@ -50,20 +46,21 @@
             z-index: 10; pointer-events: none; width: 100%; 
         }
 
-        #game-logo { width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        #popyang { color: white; font-size: 60px; font-weight: 900; margin: 0; line-height: 1; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
-        #score { color: white; font-size: 55px; font-weight: 900; margin-top: 5px; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
+        #game-logo { width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; border: 3px solid white; }
+        #popyang { color: white; font-size: 50px; font-weight: 900; text-shadow: 4px 4px 0 #000; }
+        #score { color: white; font-size: 55px; font-weight: 900; text-shadow: 4px 4px 0 #000; }
         
-        #menu { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
+        #menu { 
+            position: absolute; top: 20px; right: 20px; 
+            z-index: 100; /* 確保選單在最上層 */
+            display: flex; flex-direction: column; gap: 10px; 
+        }
         
         button, .lang-select { 
             padding: 10px 15px; border-radius: 12px; border: 3px solid black; 
             font-weight: bold; cursor: pointer; background: white; 
-            transition: 0.1s; box-shadow: 0 4px 0 #000; font-family: sans-serif; 
-            text-align: center; outline: none;
+            box-shadow: 0 4px 0 #000; pointer-events: auto; /* 確保可以被點擊 */
         }
-
-        button:active { transform: translateY(2px); box-shadow: 0 0 0 #000; }
 
         .modal { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
@@ -72,16 +69,12 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.5); color: black;
         }
 
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #000; border-radius: 8px; font-size: 16px; }
-        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; }
-        
-        #privacy-link { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10; }
-        #privacy-link a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 12px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
 
-        @media (max-width: 480px) {
-            #popyang { font-size: 40px; }
-            #score { font-size: 45px; }
-            #game-logo { width: 60px; height: 60px; }
+        /* 預加載隱形元素，防止點擊瞬間才去抓圖 */
+        body::after {
+            content: url('https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg');
+            display: none;
         }
     </style>
 </head>
@@ -99,23 +92,44 @@
         <button id="open-auth-btn">👤 LOGIN/SIGN UP</button>
         <button id="rank-btn">🏆 Leader Board</button>
         <button id="achievement-btn">🎖️ Achievement</button>
-        <select id="languages" class="lang-select">
             <option value="en">🌏 English</option>
             <option value="zh-TW" data-url="tw">🌏 正體中文</option>
             <option value="zh-cn" data-url="cn">🌏 残体中文</option>
         </select>
     </div>
 
-    <div id="auth-box" class="modal">...</div>
-    <div id="user-menu-box" class="modal">...</div>
-    <div id="leaderboard-box" class="modal">...</div>
-    <div id="achievement-box" class="modal">...</div>
+    <div id="auth-box" class="modal">
+        <h2 style="text-align:center;">Login</h2>
+        <input type="email" id="auth-email" placeholder="Email" style="width:100%; padding:10px; margin:5px 0;">
+        <input type="password" id="auth-password" placeholder="Password" style="width:100%; padding:10px; margin:5px 0;">
+        <button id="email-login-btn" style="width:100%; background:#4CAF50; color:white;">Login</button>
+        <button id="google-login-btn" style="width:100%; margin-top:5px;">Google Login</button>
+        <button id="close-auth" style="width:100%; margin-top:10px;">Cancel</button>
+    </div>
 
-    <div id="privacy-link"><a href="privacy" target="_blank">Privacy Policy</a></div>
+    <div id="user-menu-box" class="modal">
+        <h2 style="text-align:center;">Settings</h2>
+        <input type="text" id="new-nickname" placeholder="New Name" style="width:100%; padding:10px;">
+        <button id="update-name-btn" style="width:100%; background:#4CAF50; color:white; margin-top:10px;">Update Name</button>
+        <button id="logout-btn" style="width:100%; background:#ff7675; color:white; margin-top:5px;">Logout</button>
+        <button id="close-user" style="width:100%; margin-top:10px;">Close</button>
+    </div>
+
+    <div id="leaderboard-box" class="modal">
+        <h2 style="text-align:center;">Top 10</h2>
+        <div id="rank-list">Loading...</div>
+        <button id="close-rank" style="width:100%; margin-top:15px;">Close</button>
+    </div>
+
+    <div id="achievement-box" class="modal">
+        <h2 style="text-align:center;">🏅 Achievements</h2>
+        <p style="text-align:center;">Coming soon...</p>
+        <button id="close-achievement" style="width:100%; margin-top:15px;">Close</button>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -139,20 +153,10 @@
         let currentUser = null;
         let isPressed = false;
         let uploadTimer = null;
-        let rAFId = null;
-
         scoreDisplay.textContent = count;
 
-        // 強制預載入圖片到快取
-        const preloadImg1 = new Image(); preloadImg1.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
-        const preloadImg3 = new Image(); preloadImg3.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
-
-        // 音效池 (增加到 20 個以應對瘋狂連點)
-        const audioPool = Array.from({ length: 20 }, () => {
-            const a = new Audio('pop.mp3');
-            a.preload = 'auto';
-            return a;
-        });
+        // 音效池
+        const audioPool = Array.from({ length: 10 }, () => new Audio('pop.mp3'));
         let poolIdx = 0;
         function playPop() {
             const s = audioPool[poolIdx];
@@ -161,7 +165,7 @@
             poolIdx = (poolIdx + 1) % audioPool.length;
         }
 
-        // --- 優化後的點擊邏輯 ---
+        // 核心連點邏輯
         function pressDown(e) {
             if (isPressed) return;
             if (e && e.cancelable) e.preventDefault();
@@ -172,11 +176,7 @@
             localStorage.setItem('yang_clicks', count);
             playPop();
 
-            // 僅在下一幀變動 class，極大減輕主線程壓力
-            if (rAFId) cancelAnimationFrame(rAFId);
-            rAFId = requestAnimationFrame(() => {
-                gameTarget.classList.add('active');
-            });
+            requestAnimationFrame(() => gameTarget.classList.add('active'));
 
             if (currentUser) {
                 clearTimeout(uploadTimer);
@@ -186,63 +186,36 @@
 
         function pressUp() { 
             isPressed = false; 
-            if (rAFId) cancelAnimationFrame(rAFId);
-            rAFId = requestAnimationFrame(() => {
-                gameTarget.classList.remove('active');
-            });
+            requestAnimationFrame(() => gameTarget.classList.remove('active'));
         }
 
-        // --- 手機與電腦事件嚴格區分 ---
+        // 綁定事件
         if ('ontouchstart' in window) {
             gameTarget.addEventListener('touchstart', pressDown, { passive: false });
-            window.addEventListener('touchend', pressUp, { passive: false });
+            window.addEventListener('touchend', pressUp);
         } else {
             gameTarget.addEventListener('mousedown', (e) => { if(e.button === 0) pressDown(e); });
             window.addEventListener('mouseup', pressUp);
         }
 
-        window.addEventListener('keydown', (e) => { 
-            if(e.target.tagName !== 'INPUT' && !e.repeat && (e.key === ' ' || e.key === 'Enter')) pressDown(e); 
-        });
-        window.addEventListener('keyup', pressUp);
-
-        // Firebase 邏輯 (其餘部分保持不變)
+        // Firebase 數據同步
         async function syncDataToFirebase() {
             if (!currentUser) return;
-            try {
-                await setDoc(doc(db, "leaderboard", currentUser.uid), {
-                    name: currentUser.displayName || currentUser.email.split('@')[0],
-                    clicks: count,
-                    lastUpdated: new Date()
-                }, { merge: true });
-            } catch (e) { console.error(e); }
+            await setDoc(doc(db, "leaderboard", currentUser.uid), {
+                name: currentUser.displayName || currentUser.email.split('@')[0],
+                clicks: count,
+                lastUpdated: new Date()
+            }, { merge: true });
         }
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('open-auth-btn').textContent = "👤 " + (user.displayName || user.email.split('@')[0]);
-                const docSnap = await getDoc(doc(db, "leaderboard", user.uid));
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.clicks > count) {
-                        count = data.clicks;
-                        scoreDisplay.textContent = count;
-                        localStorage.setItem('yang_clicks', count);
-                    }
-                }
-            } else {
-                currentUser = null;
-                document.getElementById('open-auth-btn').textContent = "👤 LOGIN/SIGN UP";
-            }
-        });
-
-        // 彈窗控制等其餘 JS...
+        // UI 控制邏輯
         const closeAll = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        
         document.getElementById('open-auth-btn').onclick = () => {
             if(currentUser) document.getElementById('user-menu-box').style.display = 'block';
             else document.getElementById('auth-box').style.display = 'block';
         };
+
         document.getElementById('rank-btn').onclick = () => {
             document.getElementById('leaderboard-box').style.display = 'block';
             const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10));
@@ -250,11 +223,24 @@
                 const l = document.getElementById('rank-list'); l.innerHTML = '';
                 sn.forEach(d => {
                     const data = d.data();
-                    l.innerHTML += `<div class="rank-item"><span>${data.name || 'Player'}</span><b>${data.clicks}</b></div>`;
+                    l.innerHTML += `<div class="rank-item"><span>${data.name}</span><b>${data.clicks}</b></div>`;
                 });
             });
         };
+
+        document.getElementById('achievement-btn').onclick = () => document.getElementById('achievement-box').style.display = 'block';
+        document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider).then(closeAll);
+        document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
+        
         document.querySelectorAll('[id^="close-"]').forEach(btn => btn.onclick = closeAll);
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                document.getElementById('open-auth-btn').textContent = "👤 " + (user.displayName || user.email.split('@')[0]);
+            }
+        });
+
         window.oncontextmenu = () => false;
     </script>
 </body>
