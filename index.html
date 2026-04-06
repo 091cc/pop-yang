@@ -27,11 +27,6 @@
 </head>
 <body>
 
-    <div style="display:none;">
-        <img src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg">
-        <img src="https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg">
-    </div>
-
     <div id="ui-container">
         <div id="popyang">POPYANG</div>
         <div id="score">0</div>
@@ -100,12 +95,21 @@
 
         let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
         let currentUser = null;
-        let uploadTimer = null; // 節流計時器
+        let uncommittedClicks = 0; // 尚未同步到 Firebase 的累積點擊數
+        let uploadTimer = null;
+
         const scoreDisplay = document.getElementById('score');
         const imgElement = document.getElementById('pop-img');
         scoreDisplay.textContent = count;
 
-        // --- 優化：音效池邏輯 (5軌循環) ---
+        // 1. 強制預載入圖片 (避免切換時閃白)
+        const imgUrls = [
+            "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg",
+            "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg"
+        ];
+        imgUrls.forEach(url => { const img = new Image(); img.src = url; });
+
+        // 2. 音效池
         const audioPool = [];
         const poolSize = 5; 
         for (let i = 0; i < poolSize; i++) {
@@ -122,40 +126,52 @@
             poolIndex = (poolIndex + 1) % poolSize;
         }
 
+        // 3. 仿 PopCat 的批次同步邏輯
+        async function syncToFirebase() {
+            if (!currentUser || uncommittedClicks === 0) return;
+            
+            const currentTotal = count;
+            uncommittedClicks = 0; // 重設累計
+            
+            try {
+                await setDoc(doc(db, "leaderboard", currentUser.uid), {
+                    name: currentUser.displayName || currentUser.email.split('@')[0],
+                    clicks: currentTotal,
+                    lastUpdated: new Date()
+                }, { merge: true });
+                console.log("Synced:", currentTotal);
+            } catch (e) {
+                console.error("Sync Error", e);
+            }
+        }
+
         async function addPoint() {
-            // 本地更新 (保證手感)
             count++;
+            uncommittedClicks++;
             scoreDisplay.textContent = count;
             localStorage.setItem('yang_clicks', count);
             playPopSound();
             
-            // Firebase 節流寫入 (防止卡頓)
-            if (currentUser) {
+            // 如果累計達 50 次，立即同步；否則等停手 3 秒後同步
+            if (uncommittedClicks >= 50) {
                 if (uploadTimer) clearTimeout(uploadTimer);
-                uploadTimer = setTimeout(async () => {
-                    try {
-                        await setDoc(doc(db, "leaderboard", currentUser.uid), {
-                            name: currentUser.displayName || currentUser.email.split('@')[0],
-                            clicks: count,
-                            lastUpdated: new Date()
-                        }, { merge: true });
-                    } catch (e) { console.error("Sync failed", e); }
-                }, 2000); // 停手後 2 秒才上傳
+                syncToFirebase();
+            } else {
+                if (uploadTimer) clearTimeout(uploadTimer);
+                uploadTimer = setTimeout(syncToFirebase, 3000);
             }
         }
 
+        // 交互邏輯
         const pressDown = (e) => {
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
             if (e && e.repeat) return;
-            imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
+            imgElement.src = imgUrls[1];
             addPoint();
         };
 
-        const pressUp = () => {
-            imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
-        };
+        const pressUp = () => { imgElement.src = imgUrls[0]; };
 
-        // 事件監聽
         imgElement.addEventListener('mousedown', pressDown);
         window.addEventListener('mouseup', pressUp);
         imgElement.addEventListener('touchstart', (e) => { 
@@ -172,7 +188,7 @@
         });
         window.addEventListener('keyup', pressUp);
 
-        // Firebase 狀態監聽
+        // Firebase Auth 狀態
         onAuthStateChanged(auth, async (user) => {
             currentUser = user;
             const openBtn = document.getElementById('open-auth-btn');
@@ -195,7 +211,7 @@
             }
         });
 
-        // 按鈕邏輯
+        // 按鈕功能
         document.getElementById('email-login-btn').onclick = async () => {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
