@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="logo.png">
 
     <style>
-        /* 效能優化：防止連點卡頓 */
+        /* 效能優化：防止連點卡頓與藍色選取框 */
         * {
             -webkit-tap-highlight-color: transparent;
             touch-action: none; 
@@ -96,7 +96,7 @@
         <img id="img-open" class="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg">
     </div>
 
-    <audio id="pop-sound" src="pop.mp3" preload="auto"></audio>
+    <audio id="pop-sound-base" src="pop.mp3" preload="auto"></audio>
 
     <div id="menu">
         <button id="open-auth-btn">👤 LOGIN/SIGN UP</button>
@@ -171,33 +171,56 @@
         const gameTarget = document.getElementById('game-target');
         const imgClose = document.getElementById('img-close');
         const imgOpen = document.getElementById('img-open');
-        const popSound = document.getElementById('pop-sound');
         
         let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
         let currentUser = null;
         let isPressed = false;
         let uploadTimer = null;
-        let hasChangedName = false; // 用於本地狀態追蹤
+        let hasChangedName = false;
 
         scoreDisplay.textContent = count;
 
-        // 點擊邏輯 (優化版)
+        // --- 效能優化：音效池 ---
+        const audioPool = Array.from({ length: 10 }, () => {
+            const a = new Audio('pop.mp3');
+            a.preload = 'auto';
+            return a;
+        });
+        let poolIdx = 0;
+        function playPop() {
+            const s = audioPool[poolIdx];
+            s.currentTime = 0;
+            s.play().catch(()=>{});
+            poolIdx = (poolIdx + 1) % audioPool.length;
+        }
+
+        // --- 點擊邏輯 ---
         function pressDown(e) {
             if (isPressed) return;
             if (e && e.cancelable) e.preventDefault();
             isPressed = true;
+            
+            // UI 反饋
             imgClose.classList.remove('active');
             imgOpen.classList.add('active');
+            
             count++;
             scoreDisplay.textContent = count;
             localStorage.setItem('yang_clicks', count);
-            const s = popSound.cloneNode(); s.play().catch(()=>{}); s.onended = () => s.remove();
+            
+            playPop();
+
             if (currentUser) {
                 clearTimeout(uploadTimer);
                 uploadTimer = setTimeout(syncDataToFirebase, 2000);
             }
         }
-        function pressUp() { isPressed = false; imgOpen.classList.remove('active'); imgClose.classList.add('active'); }
+
+        function pressUp() { 
+            isPressed = false; 
+            imgOpen.classList.remove('active'); 
+            imgClose.classList.add('active'); 
+        }
 
         async function syncDataToFirebase() {
             if (!currentUser) return;
@@ -210,14 +233,17 @@
             } catch (e) { console.error(e); }
         }
 
+        // 事件監聽
         gameTarget.addEventListener('touchstart', pressDown, { passive: false });
         window.addEventListener('touchend', pressUp);
         gameTarget.addEventListener('mousedown', (e) => { if(e.button === 0) pressDown(e); });
         window.addEventListener('mouseup', pressUp);
-        window.addEventListener('keydown', (e) => { if(e.target.tagName !== 'INPUT' && !e.repeat && (e.key === ' ' || e.key === 'Enter')) pressDown(e); });
+        window.addEventListener('keydown', (e) => { 
+            if(e.target.tagName !== 'INPUT' && !e.repeat && (e.key === ' ' || e.key === 'Enter')) pressDown(e); 
+        });
         window.addEventListener('keyup', pressUp);
 
-        // 狀態監聽
+        // --- Firebase 狀態監聽 ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
@@ -231,7 +257,6 @@
                         scoreDisplay.textContent = count;
                         localStorage.setItem('yang_clicks', count);
                     }
-                    // 檢查是否已更名過
                     hasChangedName = data.nameChanged || false;
                     updateNameUI();
                 }
@@ -241,7 +266,7 @@
             }
         });
 
-        // 更新更名按鈕 UI
+        // --- 更名 UI 與邏輯 ---
         function updateNameUI() {
             const btn = document.getElementById('update-name-btn');
             const hint = document.getElementById('name-limit-hint');
@@ -255,34 +280,31 @@
                 btn.textContent = "Update Name (1 Left)";
                 btn.style.background = "#4CAF50";
                 btn.disabled = false;
+                hint.textContent = "⚠️ You can only change name ONCE!";
+                hint.style.color = "#e67e22";
             }
         }
 
-        // 修改暱稱：限制一次
         document.getElementById('update-name-btn').onclick = async () => {
-            if (hasChangedName) return alert("You can't change your name anymore!");
-            
+            if (hasChangedName) return alert("You've already changed your name!");
             const newName = document.getElementById('new-nickname').value.trim();
             if(!newName || !currentUser || newName.length > 15) return alert("Invalid Name (1-15 chars)");
-            
-            if (!confirm("Are you sure? This name change is PERMANENT and can only be done ONCE.")) return;
+            if (!confirm("Confirm? This is a ONE-TIME change.")) return;
 
             try {
-                // 1. 更新 Auth Profile
                 await updateProfile(auth.currentUser, { displayName: newName });
-                // 2. 更新 Firestore 並標記已更名
                 await setDoc(doc(db, "leaderboard", currentUser.uid), { 
                     name: newName,
                     nameChanged: true 
                 }, { merge: true });
-                
-                alert("Name updated successfully!");
+                alert("Success!");
                 location.reload();
             } catch (err) { alert("Error: " + err.message); }
         };
 
-        // 彈窗與選單控制
+        // --- 彈窗控制 ---
         const closeAll = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        
         document.getElementById('open-auth-btn').onclick = () => {
             if(currentUser) {
                 document.getElementById('user-menu-box').style.display = 'block';
@@ -290,16 +312,21 @@
                 updateNameUI();
             } else document.getElementById('auth-box').style.display = 'block';
         };
+
         document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider).then(closeAll);
+        
         document.getElementById('email-reg-btn').onclick = () => {
             const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-password').value;
             createUserWithEmailAndPassword(auth, email, pass).then(closeAll).catch(e => alert(e.message));
         };
+        
         document.getElementById('email-login-btn').onclick = () => {
             const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-password').value;
             signInWithEmailAndPassword(auth, email, pass).then(closeAll).catch(e => alert(e.message));
         };
+        
         document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
+        
         document.getElementById('rank-btn').onclick = () => {
             document.getElementById('leaderboard-box').style.display = 'block';
             const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10));
@@ -312,6 +339,7 @@
                 });
             });
         };
+        
         document.getElementById('achievement-btn').onclick = () => document.getElementById('achievement-box').style.display = 'block';
         document.querySelectorAll('[id^="close-"]').forEach(btn => btn.onclick = closeAll);
         window.oncontextmenu = () => false;
