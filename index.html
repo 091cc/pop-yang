@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="logo.png">
 
     <style>
-        /* 核心效能優化：解決連點卡頓 */
+        /* 核心效能優化 */
         * {
             -webkit-tap-highlight-color: transparent;
             touch-action: none; 
@@ -29,9 +29,10 @@
             height: 100vh;
             cursor: pointer;
             z-index: 1;
-            /* 合成層優化 */
+            /* 強制提升合成層，減少重繪壓力 */
             backface-visibility: hidden;
             perspective: 1000;
+            transform: translateZ(0);
         }
 
         .pop-img {
@@ -40,18 +41,17 @@
             width: 100%; height: 100%;
             object-fit: cover;
             pointer-events: none;
-            /* 效能關鍵：使用 opacity 代替 display，並強制 GPU 加速 */
+            /* 改用 z-index + opacity 控制，確保圖片常駐顯存 */
             opacity: 0;
-            visibility: hidden;
-            transform: translateZ(0); 
+            z-index: 1;
+            transform: translateZ(0);
             will-change: opacity;
-            transition: opacity 0s; /* 確保切換瞬發 */
         }
 
-        /* 初始狀態顯示閉嘴圖 */
+        /* 顯示狀態 */
         .pop-img.active { 
             opacity: 1; 
-            visibility: visible; 
+            z-index: 2;
         }
         
         #ui-container { 
@@ -188,11 +188,17 @@
         let isPressed = false;
         let uploadTimer = null;
         let hasChangedName = false;
+        let rAFId = null;
 
         scoreDisplay.textContent = count;
 
-        // --- 效能優化：音效池系統 ---
-        const audioPool = Array.from({ length: 10 }, () => {
+        // 預載入並解碼圖片
+        [imgClose, imgOpen].forEach(img => {
+            if (img.decode) img.decode().catch(() => {});
+        });
+
+        // 音效池
+        const audioPool = Array.from({ length: 15 }, () => {
             const a = new Audio('pop.mp3');
             a.preload = 'auto';
             return a;
@@ -205,21 +211,24 @@
             poolIdx = (poolIdx + 1) % audioPool.length;
         }
 
-        // --- 點擊核心邏輯 (與 CSS Opacity 連動) ---
+        // --- 核心優化點：使用 RequestAnimationFrame 控制畫面切換 ---
         function pressDown(e) {
             if (isPressed) return;
             if (e && e.cancelable) e.preventDefault();
             isPressed = true;
             
-            // 畫面反饋：切換 active class 觸發 opacity 變化
-            imgClose.classList.remove('active');
-            imgOpen.classList.add('active');
-            
+            // 邏輯處理 (不延遲)
             count++;
             scoreDisplay.textContent = count;
             localStorage.setItem('yang_clicks', count);
-            
             playPop();
+
+            // 畫面處理 (交由螢幕刷新率決定)
+            if (rAFId) cancelAnimationFrame(rAFId);
+            rAFId = requestAnimationFrame(() => {
+                imgClose.classList.remove('active');
+                imgOpen.classList.add('active');
+            });
 
             if (currentUser) {
                 clearTimeout(uploadTimer);
@@ -229,8 +238,11 @@
 
         function pressUp() { 
             isPressed = false; 
-            imgOpen.classList.remove('active'); 
-            imgClose.classList.add('active'); 
+            if (rAFId) cancelAnimationFrame(rAFId);
+            rAFId = requestAnimationFrame(() => {
+                imgOpen.classList.remove('active'); 
+                imgClose.classList.add('active'); 
+            });
         }
 
         async function syncDataToFirebase() {
@@ -244,7 +256,7 @@
             } catch (e) { console.error(e); }
         }
 
-        // 事件綁定
+        // 事件監聽
         gameTarget.addEventListener('touchstart', pressDown, { passive: false });
         window.addEventListener('touchend', pressUp);
         gameTarget.addEventListener('mousedown', (e) => { if(e.button === 0) pressDown(e); });
@@ -254,7 +266,7 @@
         });
         window.addEventListener('keyup', pressUp);
 
-        // --- Firebase 監聽與狀態 ---
+        // Firebase 邏輯
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
@@ -276,13 +288,11 @@
             }
         });
 
-        // --- 語言連結切換 ---
         document.getElementById('languages').addEventListener('change', function() {
-            const targetUrl = this.options[this.selectedIndex].getAttribute('data-url');
-            if (targetUrl) window.location.href = targetUrl;
+            const url = this.options[this.selectedIndex].getAttribute('data-url');
+            if (url) window.location.href = url;
         });
 
-        // --- 更名邏輯 (僅限一次) ---
         function updateNameUI() {
             const btn = document.getElementById('update-name-btn');
             const hint = document.getElementById('name-limit-hint');
@@ -300,61 +310,47 @@
         }
 
         document.getElementById('update-name-btn').onclick = async () => {
-            if (hasChangedName) return alert("Forbidden!");
+            if (hasChangedName) return;
             const newName = document.getElementById('new-nickname').value.trim();
-            if(!newName || !currentUser || newName.length > 15) return alert("Invalid Name (1-15 chars)");
-            if (!confirm("Confirm? This is a ONE-TIME change.")) return;
-
+            if(!newName || !currentUser || newName.length > 15) return alert("Invalid Name");
+            if (!confirm("Confirm permanent name change?")) return;
             try {
                 await updateProfile(auth.currentUser, { displayName: newName });
                 await setDoc(doc(db, "leaderboard", currentUser.uid), { name: newName, nameChanged: true }, { merge: true });
-                alert("Success!");
                 location.reload();
             } catch (err) { alert(err.message); }
         };
 
-        // --- 介面彈窗控制 ---
         const closeAll = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        
         document.getElementById('open-auth-btn').onclick = () => {
             if(currentUser) {
                 document.getElementById('user-menu-box').style.display = 'block';
-                document.getElementById('new-nickname').value = currentUser.displayName || "";
                 updateNameUI();
             } else document.getElementById('auth-box').style.display = 'block';
         };
-
         document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider).then(closeAll);
-        
         document.getElementById('email-reg-btn').onclick = () => {
-            const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-password').value;
-            createUserWithEmailAndPassword(auth, email, pass).then(closeAll).catch(e => alert(e.message));
+            const e = document.getElementById('auth-email').value, p = document.getElementById('auth-password').value;
+            createUserWithEmailAndPassword(auth, e, p).then(closeAll).catch(err => alert(err.message));
         };
-        
         document.getElementById('email-login-btn').onclick = () => {
-            const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-password').value;
-            signInWithEmailAndPassword(auth, email, pass).then(closeAll).catch(e => alert(e.message));
+            const e = document.getElementById('auth-email').value, p = document.getElementById('auth-password').value;
+            signInWithEmailAndPassword(auth, e, p).then(closeAll).catch(err => alert(err.message));
         };
-        
         document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
-        
         document.getElementById('rank-btn').onclick = () => {
             document.getElementById('leaderboard-box').style.display = 'block';
             const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10));
-            onSnapshot(q, (snapshot) => {
-                const list = document.getElementById('rank-list');
-                list.innerHTML = '';
-                snapshot.forEach(d => {
+            onSnapshot(q, (sn) => {
+                const l = document.getElementById('rank-list'); l.innerHTML = '';
+                sn.forEach(d => {
                     const data = d.data();
-                    list.innerHTML += `<div class="rank-item"><span>${data.name || 'Player'}</span><b>${data.clicks}</b></div>`;
+                    l.innerHTML += `<div class="rank-item"><span>${data.name || 'Player'}</span><b>${data.clicks}</b></div>`;
                 });
             });
         };
-        
         document.getElementById('achievement-btn').onclick = () => document.getElementById('achievement-box').style.display = 'block';
         document.querySelectorAll('[id^="close-"]').forEach(btn => btn.onclick = closeAll);
-        
-        // 禁用右鍵選單
         window.oncontextmenu = () => false;
     </script>
 </body>
