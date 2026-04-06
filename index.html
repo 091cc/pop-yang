@@ -3,32 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="google-site-verification" content="dD8BLSdmLGFWDNZ_lxgi28iqK6gn1OapISj1-YDAPO4" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>POPYANG</title>
     <link rel="icon" type="image/png" href="logo.png">
 
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: black; user-select: none; -webkit-user-select: none; font-family: 'Arial Black', sans-serif; }
-        #pop-img { width: 100vw; height: 100vh; object-fit: cover; cursor: pointer; display: block; }
+        /* 手機端基礎優化：移除點擊藍色框與優化觸控反應 */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background-color: black; 
+            user-select: none; -webkit-user-select: none; 
+            font-family: 'Arial Black', sans-serif; 
+        }
+
+        /* 防止手機長按圖片彈出儲存選單 */
+        #pop-img { 
+            width: 100vw; height: 100vh; 
+            object-fit: cover; cursor: pointer; display: block; 
+            -webkit-touch-callout: none; 
+        }
         
-        #ui-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; pointer-events: none; width: 100%; }
+        #ui-container { 
+            position: absolute; top: 20px; left: 50%; 
+            transform: translateX(-50%); display: flex; 
+            flex-direction: column; align-items: center; 
+            z-index: 10; pointer-events: none; width: 100%; 
+        }
+
         #game-logo { width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         #popyang { color: white; font-size: 60px; font-weight: 900; margin: 0; line-height: 1; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         #score { color: white; font-size: 50px; font-weight: 900; margin-top: 5px; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         
+        /* 選單：桌機在右上，手機調整大小 */
         #menu { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
         button { padding: 10px 15px; border-radius: 12px; border: 3px solid black; font-weight: bold; cursor: pointer; background: white; transition: 0.2s; box-shadow: 0 4px 0 #000; font-family: sans-serif; }
         button:hover { background: #f0f0f0; transform: translateY(-2px); }
         button:active { transform: translateY(2px); box-shadow: 0 0 0 #000; }
         button:disabled { background: #ccc !important; cursor: not-allowed; box-shadow: none; transform: none; }
 
-        .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 25px; z-index: 200; display: none; width: 280px; border: 6px solid #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            background: white; padding: 25px; border-radius: 25px; z-index: 200; 
+            display: none; width: 280px; border: 6px solid #000; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
+        }
+
         input { width: 90%; padding: 10px; margin: 8px 0; border: 2px solid #000; border-radius: 8px; font-size: 16px; }
         input:disabled { background: #f9f9f9; color: #999; }
         .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; color: black; font-family: sans-serif; }
         
         #privacy-link { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10; }
         #privacy-link a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 12px; font-family: sans-serif; }
+
+        /* 手機版小螢幕適配 */
+        @media (max-width: 480px) {
+            #popyang { font-size: 40px; }
+            #score { font-size: 40px; }
+            #game-logo { width: 60px; height: 60px; }
+            button { font-size: 12px; padding: 8px 12px; }
+        }
     </style>
 </head>
 <body>
@@ -101,6 +139,14 @@
         const scoreDisplay = document.getElementById('score');
         const imgElement = document.getElementById('pop-img');
         const popSound = document.getElementById('pop-sound');
+
+        // 定義圖片路徑
+        const imgOpen = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
+        const imgClose = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
+
+        // 圖片預載邏輯：解決手機端第一次點擊閃白問題
+        const preImg = new Image();
+        preImg.src = imgOpen;
         
         let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
         let currentUser = null;
@@ -116,26 +162,22 @@
         document.getElementById('close-user-menu').onclick = closeModals;
         document.getElementById('close-rank').onclick = closeModals;
 
-        // --- 個人設定視窗開啟 & 狀態檢查 ---
+        // --- 個人設定 & 帳號邏輯 (保持不變) ---
         document.getElementById('open-auth-btn').onclick = async () => {
             if (currentUser) {
                 document.getElementById('user-menu-box').style.display = 'block';
                 const nameInput = document.getElementById('new-nickname');
                 const updateBtn = document.getElementById('update-name-btn');
                 const msg = document.getElementById('name-status-msg');
-                
                 nameInput.value = currentUser.displayName || currentUser.email.split('@')[0];
-
                 const userDoc = await getDoc(doc(db, "leaderboard", currentUser.uid));
                 if (userDoc.exists() && userDoc.data().nameChanged === true) {
-                    nameInput.disabled = true;
-                    updateBtn.disabled = true;
+                    nameInput.disabled = true; updateBtn.disabled = true;
                     updateBtn.textContent = "The name has been modified.";
                     msg.textContent = "You have already changed the display name.";
                     msg.style.color = "red";
                 } else {
-                    nameInput.disabled = false;
-                    updateBtn.disabled = false;
+                    nameInput.disabled = false; updateBtn.disabled = false;
                     updateBtn.textContent = "Save the name";
                     msg.textContent = "Modify your display name (limited to once)：";
                     msg.style.color = "#666";
@@ -149,19 +191,14 @@
             const newName = document.getElementById('new-nickname').value;
             if(!newName || !currentUser) return;
             if(newName.length > 15) return alert("The name is too long!");
-
             try {
                 await updateProfile(auth.currentUser, { displayName: newName });
-                await setDoc(doc(db, "leaderboard", currentUser.uid), { 
-                    name: newName,
-                    nameChanged: true 
-                }, { merge: true });
+                await setDoc(doc(db, "leaderboard", currentUser.uid), { name: newName, nameChanged: true }, { merge: true });
                 alert("The name has been updated successfully!");
                 location.reload();
             } catch (err) { alert(err.message); }
         };
 
-        // --- 帳號功能 ---
         document.getElementById('google-login-btn').onclick = () => {
             signInWithPopup(auth, provider).then(() => closeModals()).catch(err => alert(err.message));
         };
@@ -176,11 +213,8 @@
             const password = document.getElementById('auth-password').value;
             signInWithEmailAndPassword(auth, email, password).then(() => closeModals()).catch(err => alert(err.message));
         };
-        document.getElementById('logout-btn').onclick = () => {
-            signOut(auth).then(() => location.reload());
-        };
+        document.getElementById('logout-btn').onclick = () => { signOut(auth).then(() => location.reload()); };
 
-        // --- 排行榜 ---
         document.getElementById('rank-btn').onclick = () => {
             document.getElementById('leaderboard-box').style.display = 'block';
             const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10));
@@ -194,7 +228,6 @@
             });
         };
 
-        // --- 狀態監聽 ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
@@ -212,7 +245,7 @@
             }
         });
 
-        // --- 核心遊戲動作 ---
+        // --- 核心遊戲動作與觸控優化 ---
         async function addPoint() {
             count++;
             scoreDisplay.textContent = count;
@@ -228,26 +261,35 @@
         }
 
         function pressDown(e) {
-            if (e.repeat) return; // 防止長按不放作弊
-            if (e.type === 'touchstart') e.preventDefault();
-            imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
+            if (e.repeat) return; 
+            // 關鍵：在手機上防止連點觸發縮放或原生行為
+            if (e.cancelable) e.preventDefault();
+            imgElement.src = imgOpen;
             addPoint();
         }
-        function pressUp() { imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg"; }
+        function pressUp() { imgElement.src = imgClose; }
 
-        // 滑鼠 & 觸控監聽
-        imgElement.addEventListener('mousedown', pressDown);
-        window.addEventListener('mouseup', pressUp);
-        imgElement.addEventListener('touchstart', pressDown);
+        // 事件監聽優化
+        imgElement.addEventListener('touchstart', pressDown, { passive: false });
         window.addEventListener('touchend', pressUp);
+        imgElement.addEventListener('mousedown', (e) => {
+            if (e.button === 0) pressDown(e);
+        });
+        window.addEventListener('mouseup', pressUp);
 
         // 鍵盤監聽
         window.addEventListener('keydown', (e) => {
-            // 排除打字中的情況
             if (e.target.tagName === 'INPUT') return;
             pressDown(e);
         });
         window.addEventListener('keyup', pressUp);
+
+        // 防止右鍵選單干擾手機體驗
+        window.oncontextmenu = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        };
     </script>
 </body>
 </html>
