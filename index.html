@@ -38,7 +38,6 @@
     </div>
 
     <img id="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg">
-    <audio id="pop-sound" src="pop.mp3" preload="auto"></audio>
 
     <div id="menu">
         <button id="open-auth-btn">👤 LOGIN / SIGN UP</button>
@@ -103,16 +102,32 @@
         let currentUser = null;
         const scoreDisplay = document.getElementById('score');
         const imgElement = document.getElementById('pop-img');
-        const popSound = document.getElementById('pop-sound');
         scoreDisplay.textContent = count;
+
+        // --- 優化：音效池邏輯 (解決點擊太快沒聲音) ---
+        const audioPool = [];
+        const poolSize = 6; 
+        for (let i = 0; i < poolSize; i++) {
+            const audio = new Audio("pop.mp3");
+            audio.volume = 0.5;
+            audioPool.push(audio);
+        }
+        let poolIndex = 0;
+
+        function playPopSound() {
+            const s = audioPool[poolIndex];
+            s.currentTime = 0;
+            s.play().catch(()=>{}); 
+            poolIndex = (poolIndex + 1) % poolSize;
+        }
+        // ------------------------------------------
 
         async function addPoint() {
             count++;
             scoreDisplay.textContent = count;
             localStorage.setItem('yang_clicks', count);
-            popSound.currentTime = 0;
-            popSound.volume = 0.5;
-            popSound.play().catch(()=>{}); 
+            playPopSound();
+            
             if (currentUser) {
                 setDoc(doc(db, "leaderboard", currentUser.uid), {
                     name: currentUser.displayName || currentUser.email.split('@')[0],
@@ -122,11 +137,9 @@
             }
         }
 
-        // 統一觸發函數
         const pressDown = (e) => {
-            // 如果正在打字，不要觸發遊戲
+            // 如果正在打字，則不觸發遊戲
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
-            // 防止重複觸發 (按住不放時)
             if (e && e.repeat) return;
             
             imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
@@ -137,11 +150,11 @@
             imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
         };
 
-        // 滑鼠監聽
+        // 事件監聽：滑鼠
         imgElement.addEventListener('mousedown', pressDown);
         window.addEventListener('mouseup', pressUp);
 
-        // 觸控監聽
+        // 事件監聽：觸控
         imgElement.addEventListener('touchstart', (e) => { 
             if(e.target.closest('#menu') || e.target.closest('.modal')) return;
             if (e.cancelable) e.preventDefault(); 
@@ -149,17 +162,15 @@
         }, { passive: false });
         window.addEventListener('touchend', pressUp);
 
-        // 鍵盤監聽修復：恢復對 Window 的全域偵測
+        // 事件監聽：鍵盤恢復
         window.addEventListener('keydown', (e) => {
-            // 防止空白鍵造成網頁捲動
-            if (e.code === "Space" && document.activeElement.tagName !== 'INPUT') {
-                e.preventDefault();
-            }
+            if (document.activeElement.tagName === 'INPUT') return;
+            if (e.code === "Space") e.preventDefault(); // 防止空白鍵捲動
             pressDown(e);
         });
         window.addEventListener('keyup', pressUp);
 
-        // Firebase 登入與其他邏輯維持不變...
+        // Firebase 邏輯
         onAuthStateChanged(auth, async (user) => {
             currentUser = user;
             const openBtn = document.getElementById('open-auth-btn');
@@ -199,7 +210,11 @@
             }
         };
 
-        document.getElementById('languages').onchange = (e) => { if (e.target.value) window.location.href = e.target.value; };
+        // 語言跳轉
+        document.getElementById('languages').onchange = (e) => { 
+            if (e.target.value) window.location.href = e.target.value; 
+        };
+
         document.getElementById('open-auth-btn').onclick = () => document.getElementById('auth-box').style.display = 'block';
         document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider).then(() => document.getElementById('auth-box').style.display = 'none');
         document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
