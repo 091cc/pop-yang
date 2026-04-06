@@ -67,7 +67,6 @@
 
         button:active { transform: translateY(2px); box-shadow: 0 0 0 #000; }
 
-        /* 彈窗樣式 */
         .modal { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
             background: white; padding: 25px; border-radius: 25px; z-index: 200; 
@@ -85,7 +84,6 @@
             #popyang { font-size: 40px; }
             #score { font-size: 45px; }
             #game-logo { width: 60px; height: 60px; }
-            button, .lang-select { font-size: 12px; padding: 8px 12px; }
         }
     </style>
 </head>
@@ -130,9 +128,9 @@
 
     <div id="user-menu-box" class="modal">
         <h2 style="text-align:center; margin:0;">Settings</h2>
-        <p id="name-status-msg" style="text-align:center; color: #666; font-size: 14px;">Modify display name (Once)：</p>
-        <input type="text" id="new-nickname" placeholder="New nickname">
-        <button id="update-name-btn" style="width:100%; background: #4CAF50; color: white;">Save Name</button>
+        <p style="text-align:center; color: #666; font-size: 14px;">Modify display name：</p>
+        <input type="text" id="new-nickname" placeholder="Enter new name">
+        <button id="update-name-btn" style="width:100%; background: #4CAF50; color: white;">Update Name</button>
         <hr>
         <button id="logout-btn" style="width:100%; background: #ff7675; color: white;">Logout</button>
         <button id="close-user-menu" style="width:100%; margin-top:10px; background: #eee;">Close</button>
@@ -147,8 +145,6 @@
     <div id="achievement-box" class="modal">
         <h2 style="text-align:center; margin:0;">🏅 Achievements</h2>
         <div id="achievement-list" style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
-            <div class="rank-item"><span>First Click</span><b>✅</b></div>
-            <div class="rank-item" style="color:#ccc"><span>1,000 Clicks</span><b>Locked</b></div>
         </div>
         <button id="close-achievement" style="width:100%; margin-top:20px; background: #eee;">Close</button>
     </div>
@@ -174,7 +170,6 @@
         const db = getFirestore();
         const provider = new GoogleAuthProvider();
 
-        // --- 變數定義 ---
         const scoreDisplay = document.getElementById('score');
         const gameTarget = document.getElementById('game-target');
         const imgClose = document.getElementById('img-close');
@@ -187,23 +182,16 @@
 
         scoreDisplay.textContent = count;
 
-        // --- 核心遊戲動作 ---
         function pressDown(e) {
             if (isPressed) return;
             if (e && e.cancelable) e.preventDefault();
-            
             isPressed = true;
             imgClose.classList.remove('active');
             imgOpen.classList.add('active');
-            
             count++;
             scoreDisplay.textContent = count;
             localStorage.setItem('yang_clicks', count);
-
-            const s = popSound.cloneNode();
-            s.play().catch(()=>{});
-            s.onended = () => s.remove();
-
+            const s = popSound.cloneNode(); s.play().catch(()=>{}); s.onended = () => s.remove();
             if (currentUser) {
                 setDoc(doc(db, "leaderboard", currentUser.uid), {
                     name: currentUser.displayName || currentUser.email.split('@')[0],
@@ -212,7 +200,6 @@
                 }, { merge: true });
             }
         }
-
         function pressUp() {
             isPressed = false;
             imgOpen.classList.remove('active');
@@ -226,21 +213,15 @@
         window.addEventListener('keydown', (e) => { if(e.target.tagName !== 'INPUT' && !e.repeat) pressDown(e); });
         window.addEventListener('keyup', pressUp);
 
-        // --- Firebase 登入與同步邏輯 ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
                 document.getElementById('open-auth-btn').textContent = "👤 " + (user.displayName || user.email.split('@')[0]);
-                
-                // 同步雲端分數
                 const docSnap = await getDoc(doc(db, "leaderboard", user.uid));
-                if (docSnap.exists()) {
-                    const cloudClicks = docSnap.data().clicks;
-                    if (cloudClicks > count) {
-                        count = cloudClicks;
-                        scoreDisplay.textContent = count;
-                        localStorage.setItem('yang_clicks', count);
-                    }
+                if (docSnap.exists() && docSnap.data().clicks > count) {
+                    count = docSnap.data().clicks;
+                    scoreDisplay.textContent = count;
+                    localStorage.setItem('yang_clicks', count);
                 }
             } else {
                 currentUser = null;
@@ -248,45 +229,49 @@
             }
         });
 
-        // Google 登入
-        document.getElementById('google-login-btn').onclick = () => {
-            signInWithPopup(auth, provider).then(() => {
-                document.getElementById('auth-box').style.display = 'none';
-            }).catch(e => alert(e.message));
-        };
-
-        // Email 註冊與登入
+        // 登入邏輯
+        document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider).then(() => closeAll());
         document.getElementById('email-reg-btn').onclick = () => {
             const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-password').value;
-            if(email && pass) createUserWithEmailAndPassword(auth, email, pass).then(()=>document.getElementById('auth-box').style.display = 'none').catch(e => alert(e.message));
+            if(email && pass) createUserWithEmailAndPassword(auth, email, pass).then(()=>closeAll()).catch(e => alert(e.message));
         };
         document.getElementById('email-login-btn').onclick = () => {
             const email = document.getElementById('auth-email').value, pass = document.getElementById('auth-password').value;
-            if(email && pass) signInWithEmailAndPassword(auth, email, pass).then(()=>document.getElementById('auth-box').style.display = 'none').catch(e => alert(e.message));
+            if(email && pass) signInWithEmailAndPassword(auth, email, pass).then(()=>closeAll()).catch(e => alert(e.message));
         };
-
-        // 登出
         document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
 
-        // 修改名稱
+        // --- 無限制更改名字邏輯 ---
         document.getElementById('update-name-btn').onclick = async () => {
             const newName = document.getElementById('new-nickname').value;
-            if(!newName || !currentUser || newName.length > 15) return alert("Invalid Name");
+            if(!newName || !currentUser || newName.trim().length === 0 || newName.length > 15) {
+                return alert("Please enter a valid name (1-15 characters)");
+            }
             try {
+                // 更新 Firebase Auth 帳戶資訊
                 await updateProfile(auth.currentUser, { displayName: newName });
-                await setDoc(doc(db, "leaderboard", currentUser.uid), { name: newName, nameChanged: true }, { merge: true });
-                alert("Success!"); location.reload();
-            } catch (err) { alert(err.message); }
+                // 同步更新 Firestore 排行榜中的名字
+                await setDoc(doc(db, "leaderboard", currentUser.uid), { 
+                    name: newName 
+                }, { merge: true });
+                
+                alert("The nickname has been updated successfully!");
+                location.reload(); // 重新整理以反映 UI 上的名字變化
+            } catch (err) {
+                alert("Failed to update: " + err.message);
+            }
         };
 
-        // --- 介面彈窗控制 ---
+        // 彈窗控制
         const closeAll = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-
         document.getElementById('open-auth-btn').onclick = () => {
-            if(currentUser) document.getElementById('user-menu-box').style.display = 'block';
-            else document.getElementById('auth-box').style.display = 'block';
+            if(currentUser) {
+                document.getElementById('user-menu-box').style.display = 'block';
+                document.getElementById('new-nickname').value = currentUser.displayName || "";
+            } else {
+                document.getElementById('auth-box').style.display = 'block';
+            }
         };
-
         document.getElementById('rank-btn').onclick = () => {
             document.getElementById('leaderboard-box').style.display = 'block';
             const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10));
@@ -299,15 +284,11 @@
                 });
             });
         };
-
         document.getElementById('achievement-btn').onclick = () => document.getElementById('achievement-box').style.display = 'block';
-
-        // 綁定所有取消/關閉按鈕
         document.getElementById('close-auth').onclick = closeAll;
         document.getElementById('close-user-menu').onclick = closeAll;
         document.getElementById('close-rank').onclick = closeAll;
         document.getElementById('close-achievement').onclick = closeAll;
-
         window.oncontextmenu = () => false;
     </script>
 </body>
