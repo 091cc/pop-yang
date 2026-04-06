@@ -9,214 +9,203 @@
 
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: black; user-select: none; -webkit-user-select: none; font-family: 'Arial Black', sans-serif; }
-        
-        #pop-img { 
-            width: 100vw; height: 100vh; object-fit: cover; cursor: pointer; display: block; z-index: 1;
-            will-change: transform; /* 🔥效能優化 */
-        }
-        
-        #ui-container { 
-            position: absolute; top: 40px; left: 50%; transform: translateX(-50%); 
-            display: flex; flex-direction: column; align-items: center; 
-            z-index: 10; pointer-events: none; width: 100%; 
-        }
-
-        #popyang { 
-            color: white; font-size: 60px; font-weight: 900; margin: 0; 
-            line-height: 1.2;
-            text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; 
-        }
-
-        #score { 
-            color: white; font-size: 50px; font-weight: 900; 
-            margin-top: 15px;
-            line-height: 1; 
-            text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; 
-        }
-
+        #pop-img { width: 100vw; height: 100vh; object-fit: cover; cursor: pointer; display: block; z-index: 1; }
+        #ui-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; pointer-events: none; width: 100%; }
+        #popyang { color: white; font-size: 60px; font-weight: 900; margin: 0; line-height: 1; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
+        #score { color: white; font-size: 50px; font-weight: 900; margin-top: 5px; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         #menu { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
         
+        /* 修改：讓 select 文字置中並移除預設箭頭增加美感 */
         button, .lang-select { 
-            padding: 10px 15px; border-radius: 12px; border: 3px solid black; font-weight: bold; cursor: pointer; background: white; transition: 0.2s; box-shadow: 0 4px 0 #000; font-family: sans-serif;
-            text-align: center; text-align-last: center; appearance: none; 
+            padding: 10px 15px; 
+            border-radius: 12px; 
+            border: 3px solid black; 
+            font-weight: bold; 
+            cursor: pointer; 
+            background: white; 
+            transition: 0.2s; 
+            box-shadow: 0 4px 0 #000; 
+            font-family: sans-serif;
+            text-align: center;
+            text-align-last: center;
+            appearance: none; 
         }
-
         button:active { transform: translateY(2px); box-shadow: 0 0 0 #000; }
-
+        
         .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 25px; z-index: 200; display: none; width: 280px; border: 6px solid #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-
-        input { width: 92%; padding: 10px; margin: 8px 0; border: 2px solid #000; border-radius: 8px; font-size: 16px; }
-
-        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; color: black; }
-
+        input { width: 90%; padding: 10px; margin: 8px 0; border: 2px solid #000; border-radius: 8px; font-size: 16px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; color: black; font-family: sans-serif; }
+        
+        /* 登入相關樣式 */
         #google-login-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: white; color: black; width: 100%; margin-top: 10px; }
-
         #logout-btn { background: #ff7675; color: white; width: 100%; margin-top: 10px; display: none; }
-
+        
+        /* 隱私權連結樣式 */
         .privacy-container { text-align: center; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
-
-        .privacy-link { color: #999; font-size: 12px; text-decoration: underline; }
+        .privacy-link { color: #999; font-size: 12px; text-decoration: underline; font-family: sans-serif; }
     </style>
 </head>
-
 <body>
 
-<div id="ui-container">
-    <div id="popyang">POPYANG</div>
-    <div id="score">0</div>
-</div>
+    <div id="ui-container">
+        <div id="popyang">POPYANG</div>
+        <div id="score">0</div>
+    </div>
 
-<img id="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg">
-<audio id="pop-sound" src="pop.mp3" preload="auto"></audio>
+    <img id="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg">
+    <audio id="pop-sound" src="pop.mp3" preload="auto"></audio>
 
-<div id="menu">
-    <button id="open-auth-btn">👤 LOGIN / SIGN UP</button>
-    <button id="rank-btn">🏆 RANK</button>
-    <button id="achieve-btn">🎖️ ACHIEVE</button>
-    <select id="languages" class="lang-select">
-        <option value="">🌏 English</option>
-        <option value="zh-tw/">🌏 正體中文</option>
-        <option value="zh-cn/">🌏 残体中文</option>
-    </select>
-</div>
+    <div id="menu">
+        <button id="open-auth-btn">👤 LOGIN / SIGN UP</button>
+        <button id="rank-btn">🏆 RANK</button>
+        <button id="achieve-btn">🎖️ ACHIEVE</button>
+        <select id="languages" class="lang-select">
+            <option value="">🌏 English</option>
+            <option value="zh-tw/">🌏 正體中文</option>
+            <option value="zh-cn/">🌏 残体中文</option>
+        </select>
+    </div>
 
-<!-- modals 保持原樣（省略顯示，照你原本即可） -->
+    <div id="auth-box" class="modal">
+        <h2 style="text-align:center; margin:0; color:black;">Account</h2>
+        <div id="login-fields">
+            <input type="email" id="auth-email" placeholder="Email">
+            <input type="password" id="auth-password" placeholder="Password">
+            <button id="email-login-btn" style="width:100%; background: #4CAF50; color: white;">LOGIN / SIGN UP</button>
+        </div>
+        <button id="google-login-btn">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Google Login
+        </button>
+        <button id="logout-btn">Logout</button>
+        <button class="close-btn" style="width:100%; margin-top:15px; background: #eee; color: black;">Cancel</button>
+    </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+    <div id="leaderboard-box" class="modal">
+        <h2 style="text-align:center; margin:0; color:black;">Top 10</h2>
+        <div id="rank-list" style="max-height: 300px; overflow-y: auto;">Loading...</div>
+        <button class="close-btn" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
+        <div class="privacy-container">
+            <a href="privacy" target="_blank" class="privacy-link">Privacy Policy</a>
+        </div>
+    </div>
 
-const firebaseConfig = {
-    apiKey: "你的KEY",
-    authDomain: "你的domain",
-    projectId: "你的project"
-};
+    <div id="achieve-box" class="modal">
+        <h2 style="text-align:center; margin:0; color:black;">Achievements</h2>
+        <div id="achieve-list" style="max-height: 300px; overflow-y: auto;"></div>
+        <button class="close-btn" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
+    </div>
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth();
-const db = getFirestore();
-const provider = new GoogleAuthProvider();
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
-let currentUser = null;
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJYoQH85HDsRsS-Ue69DPfRaJXik7kcEY",
+            authDomain: "pop-yang.firebaseapp.com",
+            projectId: "pop-yang",
+            storageBucket: "pop-yang.firebasestorage.app",
+            messagingSenderId: "787574512577",
+            appId: "1:787574512577:web:72094160cc3da32b86ed40"
+        };
 
-const scoreDisplay = document.getElementById('score');
-const imgElement = document.getElementById('pop-img');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore();
+        const provider = new GoogleAuthProvider();
 
-scoreDisplay.textContent = count;
+        let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
+        let currentUser = null;
+        const scoreDisplay = document.getElementById('score');
+        const imgElement = document.getElementById('pop-img');
+        const popSound = document.getElementById('pop-sound');
+        scoreDisplay.textContent = count;
 
-// 🔊 音效池
-const soundPool = [];
-for (let i = 0; i < 8; i++) {
-    const a = new Audio("pop.mp3");
-    a.volume = 0.5;
-    soundPool.push(a);
-}
-let soundIndex = 0;
-
-function playSound() {
-    const a = soundPool[soundIndex];
-    if (!a.paused) return;
-    a.currentTime = 0;
-    a.play().catch(()=>{});
-    soundIndex = (soundIndex + 1) % soundPool.length;
-}
-
-// ⚡ 節流
-let lastClick = 0;
-const CLICK_DELAY = 25;
-
-// 💾 延遲存檔
-let saveTimer = null;
-let saving = false;
-
-function scheduleSave() {
-    if (!currentUser || saving) return;
-    if (saveTimer) clearTimeout(saveTimer);
-
-    saveTimer = setTimeout(async () => {
-        saving = true;
-        await setDoc(doc(db, "leaderboard", currentUser.uid), {
-            name: currentUser.displayName || currentUser.email.split('@')[0],
-            clicks: count,
-            lastUpdated: new Date()
-        }, { merge: true });
-        saving = false;
-    }, 1000);
-}
-
-// 🎯 點擊
-function addPoint() {
-    const now = Date.now();
-    if (now - lastClick < CLICK_DELAY) return;
-    lastClick = now;
-
-    count++;
-    scoreDisplay.textContent = count;
-    localStorage.setItem('yang_clicks', count);
-
-    playSound();
-    scheduleSave();
-}
-
-const pressDown = (e) => {
-    if (e.target.closest('#menu') || e.target.closest('.modal')) return;
-    if (e.repeat) return;
-
-    requestAnimationFrame(() => {
-        imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
-    });
-
-    addPoint();
-};
-
-const pressUp = () => {
-    requestAnimationFrame(() => {
-        imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
-    });
-};
-
-// 事件
-imgElement.addEventListener('mousedown', pressDown);
-window.addEventListener('mouseup', pressUp);
-
-imgElement.addEventListener('touchstart', (e) => { 
-    if(e.target.closest('#menu') || e.target.closest('.modal')) return;
-    e.preventDefault(); 
-    pressDown(e); 
-}, { passive: false });
-
-window.addEventListener('touchend', pressUp);
-
-window.addEventListener('keydown', (e) => { if (e.target.tagName !== 'INPUT') pressDown(e); });
-window.addEventListener('keyup', pressUp);
-
-// 登入
-onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
-});
-
-// 排行榜（防重複監聽）
-let unsubscribe = null;
-
-document.getElementById('rank-btn').onclick = () => {
-    document.getElementById('leaderboard-box').style.display = 'block';
-
-    if (unsubscribe) unsubscribe();
-
-    unsubscribe = onSnapshot(
-        query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10)),
-        (snap) => {
-            const list = document.getElementById('rank-list');
-            list.innerHTML = '';
-            snap.forEach(d => {
-                list.innerHTML += `<div class="rank-item"><span>${d.data().name}</span><b>${d.data().clicks}</b></div>`;
-            });
+        // 加分與同步雲端
+        async function addPoint() {
+            count++;
+            scoreDisplay.textContent = count;
+            localStorage.setItem('yang_clicks', count);
+            const s = popSound.cloneNode(); s.volume = 0.5; s.play().catch(()=>{}); 
+            if (currentUser) {
+                setDoc(doc(db, "leaderboard", currentUser.uid), {
+                    name: currentUser.displayName || currentUser.email.split('@')[0],
+                    clicks: count,
+                    lastUpdated: new Date()
+                }, { merge: true });
+            }
         }
-    );
-};
-</script>
 
+        // 動作核心
+        const pressDown = (e) => {
+            if (e.target && (e.target.closest('#menu') || e.target.closest('.modal') || e.target.tagName === 'INPUT')) return;
+            if (e.repeat) return;
+            imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
+            addPoint();
+        };
+        const pressUp = () => imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
+
+        // 事件監聽 (滑鼠、觸控、鍵盤)
+        imgElement.addEventListener('mousedown', pressDown);
+        window.addEventListener('mouseup', pressUp);
+        imgElement.addEventListener('touchstart', (e) => { if(!e.target.closest('#menu')) e.preventDefault(); pressDown(e); });
+        window.addEventListener('touchend', pressUp);
+        window.addEventListener('keydown', (e) => { if (e.target.tagName !== 'INPUT') pressDown(e); });
+        window.addEventListener('keyup', pressUp);
+
+        // 登入狀態處理
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            const openAuthBtn = document.getElementById('open-auth-btn');
+            const loginFields = document.getElementById('login-fields');
+            const googleBtn = document.getElementById('google-login-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+
+            if (user) {
+                openAuthBtn.textContent = `👤 ${user.displayName || user.email.split('@')[0]}`;
+                loginFields.style.display = 'none';
+                googleBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+
+                const userDoc = await getDoc(doc(db, "leaderboard", user.uid));
+                if (userDoc.exists() && userDoc.data().clicks > count) {
+                    count = userDoc.data().clicks;
+                    scoreDisplay.textContent = count;
+                    localStorage.setItem('yang_clicks', count);
+                }
+            } else {
+                openAuthBtn.textContent = "👤 LOGIN / SIGN UP";
+                loginFields.style.display = 'block';
+                googleBtn.style.display = 'flex';
+                logoutBtn.style.display = 'none';
+            }
+        });
+
+        // 按鈕點擊事件
+        document.getElementById('languages').onchange = (e) => { if (e.target.value) window.location.href = e.target.value; };
+        document.getElementById('open-auth-btn').onclick = () => document.getElementById('auth-box').style.display = 'block';
+        document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider);
+        document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
+        
+        document.getElementById('rank-btn').onclick = () => {
+            document.getElementById('leaderboard-box').style.display = 'block';
+            onSnapshot(query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10)), (snap) => {
+                const list = document.getElementById('rank-list');
+                list.innerHTML = '';
+                snap.forEach(d => list.innerHTML += `<div class="rank-item"><span>${d.data().name}</span><b>${d.data().clicks}</b></div>`);
+            });
+        };
+
+        document.getElementById('achieve-btn').onclick = () => {
+            const isTW = document.getElementById('languages').value.includes('zh-tw');
+            document.getElementById('achieve-list').innerHTML = `
+                <div style="text-align:center; padding: 20px; color: #666; font-size: 18px;">
+                    ${isTW ? "敬請期待..." : "Coming Soon..."}
+                </div>`;
+            document.getElementById('achieve-box').style.display = 'block';
+        };
+
+        document.querySelectorAll('.close-btn').forEach(b => b.onclick = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'));
+    </script>
 </body>
 </html>
