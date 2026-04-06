@@ -14,11 +14,35 @@
         #popyang { color: white; font-size: 60px; font-weight: 900; margin: 0; line-height: 1; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         #score { color: white; font-size: 50px; font-weight: 900; margin-top: 5px; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         #menu { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
-        button, .lang-select { padding: 10px 15px; border-radius: 12px; border: 3px solid black; font-weight: bold; cursor: pointer; background: white; transition: 0.2s; box-shadow: 0 4px 0 #000; font-family: sans-serif; }
+        
+        /* 修改：讓 select 文字置中並移除預設箭頭增加美感 */
+        button, .lang-select { 
+            padding: 10px 15px; 
+            border-radius: 12px; 
+            border: 3px solid black; 
+            font-weight: bold; 
+            cursor: pointer; 
+            background: white; 
+            transition: 0.2s; 
+            box-shadow: 0 4px 0 #000; 
+            font-family: sans-serif;
+            text-align: center;
+            text-align-last: center;
+            appearance: none; 
+        }
         button:active { transform: translateY(2px); box-shadow: 0 0 0 #000; }
+        
         .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 25px; z-index: 200; display: none; width: 280px; border: 6px solid #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         input { width: 90%; padding: 10px; margin: 8px 0; border: 2px solid #000; border-radius: 8px; font-size: 16px; }
-        .rank-item, .achieve-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; color: black; font-family: sans-serif; }
+        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; color: black; font-family: sans-serif; }
+        
+        /* 登入相關樣式 */
+        #google-login-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: white; color: black; width: 100%; margin-top: 10px; }
+        #logout-btn { background: #ff7675; color: white; width: 100%; margin-top: 10px; display: none; }
+        
+        /* 隱私權連結樣式 */
+        .privacy-container { text-align: center; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
+        .privacy-link { color: #999; font-size: 12px; text-decoration: underline; font-family: sans-serif; }
     </style>
 </head>
 <body>
@@ -32,33 +56,42 @@
     <audio id="pop-sound" src="pop.mp3" preload="auto"></audio>
 
     <div id="menu">
-        <button id="open-auth-btn" data-en="👤 LOGIN" data-tw="👤 登入">👤 LOGIN</button>
-        <button id="rank-btn" data-en="🏆 RANK" data-tw="🏆 排行榜">🏆 RANK</button>
-        <button id="achieve-btn" data-en="🎖️ ACHIEVE" data-tw="🎖️ 成就">🎖️ ACHIEVE</button>
+        <button id="open-auth-btn">👤 LOGIN / SIGN UP</button>
+        <button id="rank-btn">🏆 RANK</button>
+        <button id="achieve-btn">🎖️ ACHIEVE</button>
         <select id="languages" class="lang-select">
             <option value="">🌏 English</option>
-            <option value="/tw/">🌏 正體中文</option>
+            <option value="zh-tw/">🌏 正體中文</option>
+            <option value="zh-cn/">🌏 残体中文</option>
         </select>
     </div>
 
     <div id="auth-box" class="modal">
-        <h2 id="auth-title" style="text-align:center; margin:0; color:black;">Account</h2>
-        <input type="email" id="auth-email" placeholder="Email">
-        <input type="password" id="auth-password" placeholder="Password">
-        <button id="email-login-btn" style="width:100%; background: #4CAF50; color: white;">Login</button>
-        <button id="google-login-btn" style="width:100%; background: white; margin-top:5px; color: black;">Google Login</button>
-        <button class="close-btn" style="width:100%; margin-top:15px; background: #eee;">Cancel</button>
+        <h2 style="text-align:center; margin:0; color:black;">Account</h2>
+        <div id="login-fields">
+            <input type="email" id="auth-email" placeholder="Email">
+            <input type="password" id="auth-password" placeholder="Password">
+            <button id="email-login-btn" style="width:100%; background: #4CAF50; color: white;">LOGIN / SIGN UP</button>
+        </div>
+        <button id="google-login-btn">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Google Login
+        </button>
+        <button id="logout-btn">Logout</button>
+        <button class="close-btn" style="width:100%; margin-top:15px; background: #eee; color: black;">Cancel</button>
     </div>
 
     <div id="leaderboard-box" class="modal">
         <h2 style="text-align:center; margin:0; color:black;">Top 10</h2>
-        <div id="rank-list">Loading...</div>
+        <div id="rank-list" style="max-height: 300px; overflow-y: auto;">Loading...</div>
         <button class="close-btn" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
+        <div class="privacy-container">
+            <a href="privacy" target="_blank" class="privacy-link">Privacy Policy</a>
+        </div>
     </div>
 
     <div id="achieve-box" class="modal">
         <h2 style="text-align:center; margin:0; color:black;">Achievements</h2>
-        <div id="achieve-list"></div>
+        <div id="achieve-list" style="max-height: 300px; overflow-y: auto;"></div>
         <button class="close-btn" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
     </div>
 
@@ -88,17 +121,7 @@
         const popSound = document.getElementById('pop-sound');
         scoreDisplay.textContent = count;
 
-        // 補回缺失的資料
-        const achievements = [
-            { threshold: 1, en: "Newbie", tw: "新手" },
-        ];
-
-        // 語言跳轉邏輯
-        document.getElementById('languages').onchange = (e) => {
-            if (e.target.value) window.location.href = e.target.value;
-        };
-
-        // 核心加分邏輯
+        // 加分與同步雲端
         async function addPoint() {
             count++;
             scoreDisplay.textContent = count;
@@ -113,57 +136,76 @@
             }
         }
 
-        // 圖片切換
+        // 動作核心
         const pressDown = (e) => {
-            if (e.target.closest('#menu') || e.target.closest('.modal')) return;
+            if (e.target && (e.target.closest('#menu') || e.target.closest('.modal') || e.target.tagName === 'INPUT')) return;
+            if (e.repeat) return;
             imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
             addPoint();
         };
         const pressUp = () => imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
 
+        // 事件監聽 (滑鼠、觸控、鍵盤)
         imgElement.addEventListener('mousedown', pressDown);
         window.addEventListener('mouseup', pressUp);
-        imgElement.addEventListener('touchstart', (e) => { e.preventDefault(); pressDown(e); });
+        imgElement.addEventListener('touchstart', (e) => { if(!e.target.closest('#menu')) e.preventDefault(); pressDown(e); });
         window.addEventListener('touchend', pressUp);
+        window.addEventListener('keydown', (e) => { if (e.target.tagName !== 'INPUT') pressDown(e); });
+        window.addEventListener('keyup', pressUp);
 
-        // 成就系統
-        document.getElementById('achieve-btn').onclick = () => {
-            const list = document.getElementById('achieve-list');
-            list.innerHTML = achievements.map(a => `
-                <div class="achieve-item" style="opacity: ${count >= a.threshold ? 1 : 0.4}">
-                    <span>${a.tw} (${a.threshold})</span>
-                    <b>${count >= a.threshold ? '✅' : '🔒'}</b>
-                </div>
-            `).join('');
-            document.getElementById('achieve-box').style.display = 'block';
-        };
+        // 登入狀態處理
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            const openAuthBtn = document.getElementById('open-auth-btn');
+            const loginFields = document.getElementById('login-fields');
+            const googleBtn = document.getElementById('google-login-btn');
+            const logoutBtn = document.getElementById('logout-btn');
 
-        // 排行榜
+            if (user) {
+                openAuthBtn.textContent = `👤 ${user.displayName || user.email.split('@')[0]}`;
+                loginFields.style.display = 'none';
+                googleBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+
+                const userDoc = await getDoc(doc(db, "leaderboard", user.uid));
+                if (userDoc.exists() && userDoc.data().clicks > count) {
+                    count = userDoc.data().clicks;
+                    scoreDisplay.textContent = count;
+                    localStorage.setItem('yang_clicks', count);
+                }
+            } else {
+                openAuthBtn.textContent = "👤 LOGIN / SIGN UP";
+                loginFields.style.display = 'block';
+                googleBtn.style.display = 'flex';
+                logoutBtn.style.display = 'none';
+            }
+        });
+
+        // 按鈕點擊事件
+        document.getElementById('languages').onchange = (e) => { if (e.target.value) window.location.href = e.target.value; };
+        document.getElementById('open-auth-btn').onclick = () => document.getElementById('auth-box').style.display = 'block';
+        document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider);
+        document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
+        
         document.getElementById('rank-btn').onclick = () => {
             document.getElementById('leaderboard-box').style.display = 'block';
-            const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10));
-            onSnapshot(q, (snap) => {
+            onSnapshot(query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10)), (snap) => {
                 const list = document.getElementById('rank-list');
                 list.innerHTML = '';
-                snap.forEach(d => {
-                    list.innerHTML += `<div class="rank-item"><span>${d.data().name}</span><b>${d.data().clicks}</b></div>`;
-                });
+                snap.forEach(d => list.innerHTML += `<div class="rank-item"><span>${d.data().name}</span><b>${d.data().clicks}</b></div>`);
             });
         };
 
-        // 彈窗通用關閉
-        document.querySelectorAll('.close-btn').forEach(b => b.onclick = () => {
-            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        });
+        document.getElementById('achieve-btn').onclick = () => {
+            const isTW = document.getElementById('languages').value.includes('zh-tw');
+            document.getElementById('achieve-list').innerHTML = `
+                <div style="text-align:center; padding: 20px; color: #666; font-size: 18px;">
+                    ${isTW ? "敬請期待..." : "Coming Soon..."}
+                </div>`;
+            document.getElementById('achieve-box').style.display = 'block';
+        };
 
-        // 登入狀態監聽
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
-            document.getElementById('open-auth-btn').textContent = user ? `👤 ${user.displayName || user.email.split('@')[0]}` : '👤 LOGIN';
-        });
-
-        document.getElementById('open-auth-btn').onclick = () => document.getElementById('auth-box').style.display = 'block';
-        document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider).then(() => location.reload());
+        document.querySelectorAll('.close-btn').forEach(b => b.onclick = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'));
     </script>
 </body>
 </html>
