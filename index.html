@@ -119,7 +119,9 @@
         document.getElementById('close-auth').onclick = closeModals;
         document.getElementById('close-user-menu').onclick = closeModals;
         document.getElementById('close-rank').onclick = closeModals;
-
+        document.getElementById('languages').onchange = (e) => { 
+            if (e.target.value) window.location.href = e.target.value; 
+        };
         // --- 個人設定視窗開啟 & 狀態檢查 ---
         document.getElementById('open-auth-btn').onclick = async () => {
             if (currentUser) {
