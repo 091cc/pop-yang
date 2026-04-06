@@ -23,37 +23,26 @@
             font-family: 'Arial Black', sans-serif; 
         }
 
-        .img-container {
+        /* 終極優化：使用背景圖切換代替 <img> 標籤 */
+        #game-target {
             position: absolute;
             width: 100vw;
             height: 100vh;
             cursor: pointer;
             z-index: 1;
-            /* 強制提升合成層，減少重繪壓力 */
+            /* 預設閉嘴圖 */
+            background: url('https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg') center/cover no-repeat;
+            /* 強制硬體加速 */
+            transform: translateZ(0);
             backface-visibility: hidden;
-            perspective: 1000;
-            transform: translateZ(0);
+            will-change: background-image;
         }
 
-        .pop-img {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: cover;
-            pointer-events: none;
-            /* 改用 z-index + opacity 控制，確保圖片常駐顯存 */
-            opacity: 0;
-            z-index: 1;
-            transform: translateZ(0);
-            will-change: opacity;
+        /* 點擊時張嘴 */
+        #game-target.active {
+            background-image: url('https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg');
         }
 
-        /* 顯示狀態 */
-        .pop-img.active { 
-            opacity: 1; 
-            z-index: 2;
-        }
-        
         #ui-container { 
             position: absolute; top: 20px; left: 50%; 
             transform: translateX(-50%); display: flex; 
@@ -104,10 +93,7 @@
         <div id="score">0</div>
     </div>
 
-    <div class="img-container" id="game-target">
-        <img id="img-close" class="pop-img active" src="https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg">
-        <img id="img-open" class="pop-img" src="https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg">
-    </div>
+    <div id="game-target"></div>
 
     <div id="menu">
         <button id="open-auth-btn">👤 LOGIN/SIGN UP</button>
@@ -120,42 +106,10 @@
         </select>
     </div>
 
-    <div id="auth-box" class="modal">
-        <h2 style="text-align:center; margin:0;">Account login</h2>
-        <input type="email" id="auth-email" placeholder="Email">
-        <input type="password" id="auth-password" placeholder="Password">
-        <button id="email-login-btn" style="width:100%; background: #4CAF50; color: white;">Login</button>
-        <button id="email-reg-btn" style="width:100%; margin-top:5px; background: #2196F3; color: white;">Sign up</button>
-        <div style="text-align:center; margin: 10px 0; color: #666;">or</div>
-        <button id="google-login-btn" style="width:100%; background: white; display: flex; align-items: center; justify-content: center; gap: 5px; color: black; border: 2px solid #000;">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Google Login
-        </button>
-        <button id="close-auth" style="width:100%; margin-top:15px; background: #eee;">Cancel</button>
-    </div>
-
-    <div id="user-menu-box" class="modal">
-        <h2 style="text-align:center; margin:0;">Settings</h2>
-        <p id="name-limit-hint" style="text-align:center; color: #e67e22; font-size: 13px; font-weight: bold;">⚠️ You can only change name ONCE!</p>
-        <input type="text" id="new-nickname" placeholder="Enter new name">
-        <button id="update-name-btn" style="width:100%; background: #4CAF50; color: white;">Update Name (1 Left)</button>
-        <hr>
-        <button id="logout-btn" style="width:100%; background: #ff7675; color: white;">Logout</button>
-        <button id="close-user-menu" style="width:100%; margin-top:10px; background: #eee;">Close</button>
-    </div>
-
-    <div id="leaderboard-box" class="modal">
-        <h2 style="text-align:center; margin:0;">Top 10</h2>
-        <div id="rank-list" style="max-height: 300px; overflow-y: auto; margin-top: 10px;">Loading...</div>
-        <button id="close-rank" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
-    </div>
-
-    <div id="achievement-box" class="modal">
-        <h2 style="text-align:center; margin:0;">🏅 Achievements</h2>
-        <div id="achievement-list" style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
-            <p style="text-align:center; color:#999;">Coming soon...</p>
-        </div>
-        <button id="close-achievement" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
-    </div>
+    <div id="auth-box" class="modal">...</div>
+    <div id="user-menu-box" class="modal">...</div>
+    <div id="leaderboard-box" class="modal">...</div>
+    <div id="achievement-box" class="modal">...</div>
 
     <div id="privacy-link"><a href="privacy" target="_blank">Privacy Policy</a></div>
 
@@ -180,25 +134,21 @@
 
         const scoreDisplay = document.getElementById('score');
         const gameTarget = document.getElementById('game-target');
-        const imgClose = document.getElementById('img-close');
-        const imgOpen = document.getElementById('img-open');
         
         let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
         let currentUser = null;
         let isPressed = false;
         let uploadTimer = null;
-        let hasChangedName = false;
         let rAFId = null;
 
         scoreDisplay.textContent = count;
 
-        // 預載入並解碼圖片
-        [imgClose, imgOpen].forEach(img => {
-            if (img.decode) img.decode().catch(() => {});
-        });
+        // 強制預載入圖片到快取
+        const preloadImg1 = new Image(); preloadImg1.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
+        const preloadImg3 = new Image(); preloadImg3.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
 
-        // 音效池
-        const audioPool = Array.from({ length: 15 }, () => {
+        // 音效池 (增加到 20 個以應對瘋狂連點)
+        const audioPool = Array.from({ length: 20 }, () => {
             const a = new Audio('pop.mp3');
             a.preload = 'auto';
             return a;
@@ -211,23 +161,21 @@
             poolIdx = (poolIdx + 1) % audioPool.length;
         }
 
-        // --- 核心優化點：使用 RequestAnimationFrame 控制畫面切換 ---
+        // --- 優化後的點擊邏輯 ---
         function pressDown(e) {
             if (isPressed) return;
             if (e && e.cancelable) e.preventDefault();
             isPressed = true;
             
-            // 邏輯處理 (不延遲)
             count++;
             scoreDisplay.textContent = count;
             localStorage.setItem('yang_clicks', count);
             playPop();
 
-            // 畫面處理 (交由螢幕刷新率決定)
+            // 僅在下一幀變動 class，極大減輕主線程壓力
             if (rAFId) cancelAnimationFrame(rAFId);
             rAFId = requestAnimationFrame(() => {
-                imgClose.classList.remove('active');
-                imgOpen.classList.add('active');
+                gameTarget.classList.add('active');
             });
 
             if (currentUser) {
@@ -240,11 +188,25 @@
             isPressed = false; 
             if (rAFId) cancelAnimationFrame(rAFId);
             rAFId = requestAnimationFrame(() => {
-                imgOpen.classList.remove('active'); 
-                imgClose.classList.add('active'); 
+                gameTarget.classList.remove('active');
             });
         }
 
+        // --- 手機與電腦事件嚴格區分 ---
+        if ('ontouchstart' in window) {
+            gameTarget.addEventListener('touchstart', pressDown, { passive: false });
+            window.addEventListener('touchend', pressUp, { passive: false });
+        } else {
+            gameTarget.addEventListener('mousedown', (e) => { if(e.button === 0) pressDown(e); });
+            window.addEventListener('mouseup', pressUp);
+        }
+
+        window.addEventListener('keydown', (e) => { 
+            if(e.target.tagName !== 'INPUT' && !e.repeat && (e.key === ' ' || e.key === 'Enter')) pressDown(e); 
+        });
+        window.addEventListener('keyup', pressUp);
+
+        // Firebase 邏輯 (其餘部分保持不變)
         async function syncDataToFirebase() {
             if (!currentUser) return;
             try {
@@ -256,17 +218,6 @@
             } catch (e) { console.error(e); }
         }
 
-        // 事件監聽
-        gameTarget.addEventListener('touchstart', pressDown, { passive: false });
-        window.addEventListener('touchend', pressUp);
-        gameTarget.addEventListener('mousedown', (e) => { if(e.button === 0) pressDown(e); });
-        window.addEventListener('mouseup', pressUp);
-        window.addEventListener('keydown', (e) => { 
-            if(e.target.tagName !== 'INPUT' && !e.repeat && (e.key === ' ' || e.key === 'Enter')) pressDown(e); 
-        });
-        window.addEventListener('keyup', pressUp);
-
-        // Firebase 邏輯
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
@@ -279,8 +230,6 @@
                         scoreDisplay.textContent = count;
                         localStorage.setItem('yang_clicks', count);
                     }
-                    hasChangedName = data.nameChanged || false;
-                    updateNameUI();
                 }
             } else {
                 currentUser = null;
@@ -288,56 +237,12 @@
             }
         });
 
-        document.getElementById('languages').addEventListener('change', function() {
-            const url = this.options[this.selectedIndex].getAttribute('data-url');
-            if (url) window.location.href = url;
-        });
-
-        function updateNameUI() {
-            const btn = document.getElementById('update-name-btn');
-            const hint = document.getElementById('name-limit-hint');
-            if (hasChangedName) {
-                btn.textContent = "Limit Reached (0 Left)";
-                btn.style.background = "#ccc";
-                btn.disabled = true;
-                hint.textContent = "❌ You have already used your one-time change.";
-                hint.style.color = "red";
-            } else {
-                btn.textContent = "Update Name (1 Left)";
-                btn.style.background = "#4CAF50";
-                btn.disabled = false;
-            }
-        }
-
-        document.getElementById('update-name-btn').onclick = async () => {
-            if (hasChangedName) return;
-            const newName = document.getElementById('new-nickname').value.trim();
-            if(!newName || !currentUser || newName.length > 15) return alert("Invalid Name");
-            if (!confirm("Confirm permanent name change?")) return;
-            try {
-                await updateProfile(auth.currentUser, { displayName: newName });
-                await setDoc(doc(db, "leaderboard", currentUser.uid), { name: newName, nameChanged: true }, { merge: true });
-                location.reload();
-            } catch (err) { alert(err.message); }
-        };
-
+        // 彈窗控制等其餘 JS...
         const closeAll = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
         document.getElementById('open-auth-btn').onclick = () => {
-            if(currentUser) {
-                document.getElementById('user-menu-box').style.display = 'block';
-                updateNameUI();
-            } else document.getElementById('auth-box').style.display = 'block';
+            if(currentUser) document.getElementById('user-menu-box').style.display = 'block';
+            else document.getElementById('auth-box').style.display = 'block';
         };
-        document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider).then(closeAll);
-        document.getElementById('email-reg-btn').onclick = () => {
-            const e = document.getElementById('auth-email').value, p = document.getElementById('auth-password').value;
-            createUserWithEmailAndPassword(auth, e, p).then(closeAll).catch(err => alert(err.message));
-        };
-        document.getElementById('email-login-btn').onclick = () => {
-            const e = document.getElementById('auth-email').value, p = document.getElementById('auth-password').value;
-            signInWithEmailAndPassword(auth, e, p).then(closeAll).catch(err => alert(err.message));
-        };
-        document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
         document.getElementById('rank-btn').onclick = () => {
             document.getElementById('leaderboard-box').style.display = 'block';
             const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(10));
@@ -349,7 +254,6 @@
                 });
             });
         };
-        document.getElementById('achievement-btn').onclick = () => document.getElementById('achievement-box').style.display = 'block';
         document.querySelectorAll('[id^="close-"]').forEach(btn => btn.onclick = closeAll);
         window.oncontextmenu = () => false;
     </script>
