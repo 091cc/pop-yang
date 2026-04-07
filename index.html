@@ -14,16 +14,19 @@
         #game-logo { width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         #popyang { color: white; font-size: 60px; font-weight: 900; margin: 0; line-height: 1; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         #score { color: white; font-size: 50px; font-weight: 900; margin-top: 5px; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
+        
         #menu { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
         button, .lang-select { padding: 10px 15px; border-radius: 12px; border: 3px solid black; font-weight: bold; cursor: pointer; background: white; transition: 0.2s; box-shadow: 0 4px 0 #000; font-family: sans-serif; font-size: 14px; height: 45px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
         .lang-select { appearance: none; text-align: center; text-align-last: center; }
         button:hover, .lang-select:hover { background: #f0f0f0; transform: translateY(-2px); box-shadow: 0 6px 0 #000; }
         button:active, .lang-select:active { transform: translateY(2px); box-shadow: 0 0 0 #000; }
         button:disabled { background: #ccc !important; cursor: not-allowed; box-shadow: none; transform: none; }
+
         .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 25px; z-index: 200; display: none; width: 280px; border: 6px solid #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         input { width: 90%; padding: 10px; margin: 8px 0; border: 2px solid #000; border-radius: 8px; font-size: 16px; }
         input:disabled { background: #f9f9f9; color: #999; }
         .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; color: black; font-family: sans-serif; }
+        
         #privacy-link { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10; }
         #privacy-link a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 12px; font-family: sans-serif; }
     </style>
@@ -93,7 +96,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, updateDoc, getDoc, collection, query, orderBy, limit, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAJYoQH85HDsRsS-Ue69DPfRaJXik7kcEY",
@@ -113,7 +116,7 @@
         const imgElement = document.getElementById('pop-img');
         const popSound = document.getElementById('pop-sound');
 
-        // 使用閉包保護變數，防止 Console 存取
+        // 使用「立即執行函數」封裝變數
         (function() {
             let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
             let currentUser = null;
@@ -121,7 +124,7 @@
 
             const closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
 
-            // --- 點擊核心邏輯 ---
+            // --- 核心加分邏輯 (防禦版) ---
             async function addPoint() {
                 count++;
                 scoreDisplay.textContent = count;
@@ -131,19 +134,18 @@
                 
                 if (currentUser) {
                     const userRef = doc(db, "leaderboard", currentUser.uid);
-                    // 防禦重點：使用 increment(1) 而非直接傳送 count
-                    // 就算同學在斷點修改了本地 count，資料庫也只會穩穩地 +1
                     try {
+                        // 使用 increment(1) 告訴伺服器：只准加 1，不准聽前端的 count 變數
                         await setDoc(userRef, {
                             name: currentUser.displayName || currentUser.email.split('@')[0],
                             clicks: increment(1), 
                             lastUpdated: new Date()
                         }, { merge: true });
-                    } catch (err) { console.error("Sync error"); }
+                    } catch (err) { console.error("Database sync failed"); }
                 }
             }
 
-            // --- 事件處理器 ---
+            // --- 點擊與鍵盤控制 ---
             const gameActions = {
                 pressDown: (e) => {
                     if (e && e.repeat) return;
@@ -156,7 +158,6 @@
                 }
             };
 
-            // 綁定監聽
             imgElement.addEventListener('mousedown', gameActions.pressDown);
             window.addEventListener('mouseup', gameActions.pressUp);
             imgElement.addEventListener('touchstart', gameActions.pressDown);
@@ -166,7 +167,7 @@
             });
             window.addEventListener('keyup', gameActions.pressUp);
 
-            // --- Firebase 狀態監聽 ---
+            // --- Firebase 登入狀態檢查 ---
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     currentUser = user;
@@ -179,11 +180,11 @@
                     }
                 } else {
                     currentUser = null;
-                    document.getElementById('open-auth-btn').textContent = "👤 LOG IN/SIGN UP";
+                    document.getElementById('open-auth-btn').textContent = "👤 LOGIN/SIGN UP";
                 }
             });
 
-            // --- 其他 UI 功能 (排行榜、登入等) ---
+            // --- 排行榜、設定與登入按鈕綁定 ---
             document.getElementById('close-auth').onclick = closeModals;
             document.getElementById('close-user-menu').onclick = closeModals;
             document.getElementById('close-rank').onclick = closeModals;
@@ -200,7 +201,7 @@
                     const userDoc = await getDoc(doc(db, "leaderboard", currentUser.uid));
                     if (userDoc.exists() && userDoc.data().nameChanged) {
                         nameInput.disabled = updateBtn.disabled = true;
-                        msg.textContent = "Name already modified.";
+                        msg.textContent = "You already changed your name.";
                         msg.style.color = "red";
                     }
                 } else {
@@ -210,7 +211,7 @@
 
             document.getElementById('update-name-btn').onclick = async () => {
                 const newName = document.getElementById('new-nickname').value;
-                if(!newName || !currentUser || newName.length > 15) return alert("Invalid name!");
+                if(!newName || !currentUser || newName.length > 15) return alert("Invalid Name!");
                 try {
                     await updateProfile(auth.currentUser, { displayName: newName });
                     await setDoc(doc(db, "leaderboard", currentUser.uid), { name: newName, nameChanged: true }, { merge: true });
