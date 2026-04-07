@@ -123,33 +123,37 @@
 
             const closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
 
-            // --- 修改後的加分邏輯：先傳 Firebase 成功後才加本地分 ---
+            // --- 核心邏輯：含作弊歸零懲罰 ---
             async function addPoint() {
                 const s = popSound.cloneNode(); s.play().catch(()=>{}); s.onended = () => s.remove();
                 
                 if (currentUser) {
                     const userRef = doc(db, "leaderboard", currentUser.uid);
                     try {
-                        // 告訴伺服器：只准加 1。如果 Security Rules 發現不符合 (舊+1)，會噴錯直接進 catch
+                        // 嘗試正常 +1
                         await setDoc(userRef, {
                             name: currentUser.displayName || currentUser.email.split('@')[0],
                             clicks: increment(1), 
                             lastUpdated: new Date()
                         }, { merge: true });
 
-                        // 寫入成功後，才正式更新本地數據
+                        // 成功後才增加本地顯示
                         count++;
                         scoreDisplay.textContent = count;
                         localStorage.setItem('yang_clicks', count);
                     } catch (err) { 
-                        console.error("作弊防禦：寫入被拒絕。"); 
-                        // 如果失敗，強制重新從雲端抓取正確數字
-                        const userDoc = await getDoc(userRef);
-                        if(userDoc.exists()) {
-                            count = userDoc.data().clicks;
-                            scoreDisplay.textContent = count;
-                            localStorage.setItem('yang_clicks', count);
-                        }
+                        // 【懲罰邏輯】寫入失敗通常代表 Security Rules 偵測到異常（例如數字跳太大）
+                        console.error("偵測到異常操作，執行分數歸零處分！");
+                        
+                        // 1. 強制將雲端分數歸零
+                        await setDoc(userRef, { clicks: 0 }, { merge: true });
+                        
+                        // 2. 本地同步歸零
+                        count = 0;
+                        scoreDisplay.textContent = count;
+                        localStorage.setItem('yang_clicks', count);
+                        
+                        alert("偵測到不正常點擊行為，分數已重置歸零！");
                     }
                 } else {
                     // 未登入者僅本地更新
@@ -159,6 +163,7 @@
                 }
             }
 
+            // 控制邏輯
             const gameActions = {
                 pressDown: (e) => {
                     if (e && e.repeat) return;
@@ -178,12 +183,13 @@
             window.addEventListener('keydown', (e) => { if (e.target.tagName !== 'INPUT') gameActions.pressDown(e); });
             window.addEventListener('keyup', gameActions.pressUp);
 
+            // 登入狀態與強制校正
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     currentUser = user;
                     document.getElementById('open-auth-btn').textContent = "👤 " + (user.displayName || user.email.split('@')[0]);
                     
-                    // 強制校正：登入後立刻以雲端數據覆蓋本地 LocalStorage，防範重整後的自嗨數字
+                    // 初始化校正：確保重整後不會顯示作弊過的舊 LocalStorage 數字
                     const userDoc = await getDoc(doc(db, "leaderboard", user.uid));
                     if (userDoc.exists()) {
                         count = userDoc.data().clicks;
@@ -196,7 +202,7 @@
                 }
             });
 
-            // UI 綁定
+            // UI 按鈕功能... (其餘不變)
             document.getElementById('close-auth').onclick = closeModals;
             document.getElementById('close-user-menu').onclick = closeModals;
             document.getElementById('close-rank').onclick = closeModals;
