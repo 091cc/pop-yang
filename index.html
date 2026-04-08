@@ -75,8 +75,17 @@
         <button id="close-user-menu" style="width:100%; margin-top:10px; ">Close</button>
     </div>
 
-    <div id="leaderboard-box" class="modal"><h2 style="text-align:center; color:black;">TOP 5</h2><div id="rank-list" style="max-height: 300px; overflow-y: auto;">Loading...</div><button id="close-rank" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button></div>
-    <div id="achievement-box" class="modal"><h2 style="text-align:center; color:black;">Achievement</h2><div style="text-align:center; padding: 20px;">🚧 Coming Soon...</div><button id="close-achievement" style="width:100%; margin-top:10px; background: #ff7675; color: white;">Close</button></div>
+    <div id="leaderboard-box" class="modal">
+        <h2 style="text-align:center; color:black;">TOP 5</h2>
+        <div id="rank-list" style="max-height: 300px; overflow-y: auto;">Loading...</div>
+        <button id="close-rank" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
+    </div>
+
+    <div id="achievement-box" class="modal">
+        <h2 style="text-align:center; color:black;">Achievement</h2>
+        <div style="text-align:center; padding: 20px;">🚧 Coming Soon...</div>
+        <button id="close-achievement" style="width:100%; margin-top:10px; background: #ff7675; color: white;">Close</button>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
@@ -108,7 +117,6 @@
 
             const closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
 
-            // --- 核心邏輯：防作弊與同步歸零 ---
             async function addPoint() {
                 const s = popSound.cloneNode(); s.play().catch(()=>{}); s.onended = () => s.remove();
                 
@@ -139,7 +147,6 @@
                 }
             }
 
-            // 遊戲操作事件
             const gameActions = {
                 pressDown: (e) => {
                     if (e && e.repeat) return;
@@ -157,7 +164,6 @@
             window.addEventListener('keydown', (e) => { if (e.target.tagName !== 'INPUT') gameActions.pressDown(e); });
             window.addEventListener('keyup', gameActions.pressUp);
 
-            // 監測登入狀態
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     currentUser = user;
@@ -174,7 +180,6 @@
                 }
             });
 
-            // 登入選單邏輯 (含限改名一次檢查)
             document.getElementById('open-auth-btn').onclick = async () => {
                 if (currentUser) {
                     document.getElementById('user-menu-box').style.display = 'block';
@@ -199,7 +204,6 @@
                 }
             };
 
-            // 改名儲存邏輯
             document.getElementById('update-name-btn').onclick = async () => {
                 const newName = document.getElementById('new-nickname').value.trim();
                 if(!newName || !currentUser || newName.length > 15) return alert("名字格式錯誤！");
@@ -210,7 +214,6 @@
                 } catch (err) { alert(err.message); }
             };
 
-            // 基礎 Auth 功能
             document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider).then(closeModals).catch(e => alert(e.message));
             document.getElementById('email-reg-btn').onclick = () => {
                 const e = document.getElementById('auth-email').value, p = document.getElementById('auth-password').value;
@@ -222,21 +225,35 @@
             };
             document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
 
-            // 排行榜功能
+            // --- 排行榜功能（含獎牌邏輯） ---
             document.getElementById('rank-btn').onclick = () => {
                 document.getElementById('leaderboard-box').style.display = 'block';
                 const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(5));
                 onSnapshot(q, (snap) => {
                     const list = document.getElementById('rank-list');
                     list.innerHTML = '';
+                    
+                    let index = 1;
                     snap.forEach(d => {
                         const data = d.data();
-                        list.innerHTML += `<div class="rank-item"><span>${data.name || 'Unknown'}</span><b>${data.clicks || 0}</b></div>`;
+                        
+                        // 判定前綴
+                        let prefix = "";
+                        if (index === 1) prefix = "🥇 ";
+                        else if (index === 2) prefix = "🥈 ";
+                        else if (index === 3) prefix = "🥉 ";
+                        else prefix = `${index}. `;
+
+                        list.innerHTML += `
+                            <div class="rank-item">
+                                <span>${prefix}${data.name || 'Unknown'}</span>
+                                <b>${data.clicks || 0}</b>
+                            </div>`;
+                        index++;
                     });
                 });
             };
 
-            // 關閉 Modal
             document.getElementById('close-auth').onclick = closeModals;
             document.getElementById('close-user-menu').onclick = closeModals;
             document.getElementById('close-rank').onclick = closeModals;
