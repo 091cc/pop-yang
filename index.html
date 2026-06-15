@@ -11,13 +11,16 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: black; user-select: none; -webkit-user-select: none; font-family: 'Arial Black', sans-serif; }
         #pop-img { width: 100vw; height: 100vh; object-fit: cover; cursor: pointer; display: block; }
         
-        /* UI 容器 */
         #ui-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; pointer-events: none; width: 100%; }
         #game-logo { width: 80px; height: 80px; margin-bottom: 10px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         #popyang { color: white; font-size: 60px; font-weight: 900; margin: 0; line-height: 1; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         #score { color: white; font-size: 50px; font-weight: 900; margin-top: 5px; text-shadow: -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000; }
         
-        /* 選單與按鈕 */
+        #broken-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
+        #broken-img-ui { width: 80%; max-width: 400px; border: 5px solid red; margin-bottom: 20px; }
+        #fix-btn { font-size: 30px; background: #ff7675; color: white; border: none; padding: 10px 40px; border-radius: 50px; cursor: pointer; pointer-events: auto; font-weight: bold; box-shadow: 0 5px 0 #c0392b; }
+        #fix-btn:active { transform: translateY(3px); box-shadow: none; }
+
         #menu { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
         button, .lang-select { padding: 10px 15px; border-radius: 12px; border: 3px solid black; font-weight: bold; cursor: pointer; background: white; transition: 0.2s; box-shadow: 0 4px 0 #000; font-family: sans-serif; font-size: 14px; height: 45px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
         .lang-select { appearance: none; text-align: center; text-align-last: center; }
@@ -25,15 +28,23 @@
         button:active, .lang-select:active { transform: translateY(2px); box-shadow: 0 0 0 #000; }
         button:disabled { background: #ccc !important; cursor: not-allowed; box-shadow: none; transform: none; color: #666; }
 
-        /* 彈窗樣式 */
-        .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 25px; z-index: 200; display: none; width: 280px; border: 6px solid #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 25px; z-index: 200; display: none; width: 280px; border: 6px solid #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); color: black; }
         input { width: 90%; padding: 10px; margin: 8px 0; border: 2px solid #000; border-radius: 8px; font-size: 16px; }
         input:disabled { background: #f9f9f9; color: #999; }
-        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; color: black; font-family: sans-serif; }
+        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 2px solid #eee; }
+        .achievement-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f1f2f6; border-radius: 15px; margin-bottom: 10px; border: 2px solid #dfe4ea; }
+        .locked { filter: grayscale(1); opacity: 0.4; }
         .auth-btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
     </style>
 </head>
 <body>
+
+    <div id="broken-overlay">
+        <h1 style="color: #ff7675; margin: 0 0 10px 0;">糟糕，水壺被搖壞了！</h1>
+        <img id="broken-img-ui" src="https://github.com/091cc/pop-yang/blob/main/Unknown.jpg?raw=true">
+        <p style="margin-bottom: 20px;">據說只有1/100000的機率會搖壞...</p>
+        <button id="fix-btn">X</button>
+    </div>
 
     <div id="ui-container">
         <img src="logo.png" id="game-logo" onerror="this.style.display='none'">
@@ -56,7 +67,7 @@
     </div>
 
     <div id="auth-box" class="modal">
-        <h2 style="text-align:center; color:black;">Login</h2>
+        <h2 style="text-align:center;">Login</h2>
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Password">
         <div class="auth-btn-group">
@@ -68,8 +79,8 @@
     </div>
 
     <div id="user-menu-box" class="modal">
-        <h2 style="text-align:center; color:black;">Profile</h2>
-        <p id="user-info" style="color:black; font-size:14px;"></p>
+        <h2 style="text-align:center;">Profile</h2>
+        <p id="user-info" style="font-size:14px;"></p>
         <input type="text" id="new-nickname" placeholder="New Nickname">
         <p id="name-warn" style="color:red; font-size:12px; display:none;">⚠️ 名字已修改過（限一次）</p>
         <div class="auth-btn-group">
@@ -80,20 +91,21 @@
     </div>
 
     <div id="leaderboard-box" class="modal">
-        <h2 style="text-align:center; color:black;">TOP 5</h2>
+        <h2 style="text-align:center;">TOP 5</h2>
         <div id="rank-list" style="max-height: 300px; overflow-y: auto;">Loading...</div>
-        <button id="close-rank" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
+        <button id="close-rank" style="width:100%; margin-top:20px; background: #ff7675; color: white; border:3px solid black;">Close</button>
     </div>
 
     <div id="achievement-box" class="modal">
-        <h2 style="text-align:center; color:black;">Achievements</h2>
-        <p style="text-align:center; color:gray;">Coming Soon...</p>
-        <button id="close-achievement" style="width:100%; margin-top:20px; background: #ff7675; color: white;">Close</button>
+        <h2 style="text-align:center; margin-top:0;">Achievements</h2>
+        <div id="ach-list" style="max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;"></div>
+        <p style="text-align:center; color:#ccc; font-size:12px; margin-top:10px;">More achievements coming soon...</p>
+        <button id="close-achievement" style="width:100%; margin-top:10px; background: #ff7675; color: white; border:3px solid black;">Close</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -110,51 +122,120 @@
         const db = getFirestore();
         const provider = new GoogleAuthProvider();
 
-        // DOM 元素
         const scoreDisplay = document.getElementById('score');
         const imgElement = document.getElementById('pop-img');
         const popSound = document.getElementById('pop-sound');
+        const brokenOverlay = document.getElementById('broken-overlay');
+        const fixBtn = document.getElementById('fix-btn');
 
         let count = parseInt(localStorage.getItem('yang_clicks')) || 0;
         let currentUser = null;
+        let isBroken = false;
         scoreDisplay.textContent = count;
 
         const closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
 
-        // 核心點擊邏輯
+        const ACHIEVEMENTS = [
+            {
+                id: "broken_expert",
+                img: "https://github.com/091cc/pop-yang/blob/main/Unknown.jpg?raw=true",
+                name: "Expert in shaking kettle",
+                desc: "Successfully shook the kettle until it broke. Probability: 1 in 100,000."
+            }
+        ];
+
+        async function loadUnlockedFromFirebase(uid) {
+            if (!uid) return {};
+            try {
+                const snap = await getDoc(doc(db, "achievements", uid));
+                return snap.exists() ? snap.data() : {};
+            } catch(e) { return {}; }
+        }
+
+        async function unlockAchievement(id) {
+            localStorage.setItem('ach_' + id, 'true');
+            if (currentUser) {
+                await setDoc(doc(db, "achievements", currentUser.uid), { [id]: true }, { merge: true });
+            }
+        }
+
+        async function renderAchievements() {
+            const list = document.getElementById('ach-list');
+            list.innerHTML = '<p style="text-align:center;color:#aaa;font-size:13px;">Loading...</p>';
+
+            const remote = await loadUnlockedFromFirebase(currentUser?.uid);
+
+            const unlockedMap = {};
+            ACHIEVEMENTS.forEach(a => {
+                unlockedMap[a.id] = localStorage.getItem('ach_' + a.id) === 'true' || !!remote[a.id];
+            });
+
+            list.innerHTML = '';
+            ACHIEVEMENTS.forEach(a => {
+                const unlocked = !!unlockedMap[a.id];
+                const item = document.createElement('div');
+                item.style.cssText = `display:flex; align-items:center; gap:12px; padding:12px; background:#f1f2f6; border-radius:15px; border:2px solid ${unlocked ? '#00b894' : '#dfe4ea'};`;
+                item.innerHTML = `
+                    <img src="${a.img}" alt="${a.name}"
+                        style="width:80px; height:60px; object-fit:cover; border-radius:8px; flex-shrink:0;
+                               ${unlocked ? '' : 'filter:grayscale(1); opacity:0.4;'}">
+                    <div>
+                        <b style="display:block; font-size:13px; color:${unlocked ? '#000' : '#999'};">${a.name}</b>
+                        <small style="font-size:10px; color:${unlocked ? '#555' : '#bbb'};">${a.desc}</small><br>
+                        <span style="display:inline-block; margin-top:5px; font-size:11px; padding:2px 8px; border-radius:20px;
+                            background:${unlocked ? '#e1f5ee' : '#eee'}; color:${unlocked ? '#0f6e56' : '#aaa'}; font-weight:bold;">
+                            ${unlocked ? '✅ Unlocked' : '🔒 Locked'}
+                        </span>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
         async function addPoint() {
-            const s = popSound.cloneNode(); 
-            s.play().catch(()=>{}); 
-            s.onended = () => s.remove();
-            
+            if (isBroken) return;
+
+            if (Math.random() < 0.00001) { 
+                triggerBroken();
+                return;
+            }
+
+            const s = popSound.cloneNode(); s.play().catch(()=>{});
             count++;
             scoreDisplay.textContent = count;
             localStorage.setItem('yang_clicks', count);
 
             if (currentUser) {
                 const userRef = doc(db, "leaderboard", currentUser.uid);
-                try {
-                    await setDoc(userRef, {
-                        name: currentUser.displayName || currentUser.email.split('@')[0],
-                        clicks: increment(1), 
-                        lastUpdated: new Date()
-                    }, { merge: true });
-                } catch (err) { 
-                    console.error("Firebase Sync Error:", err);
-                    // 這裡可視情況加入歸零防作弊邏輯
-                }
+                await setDoc(userRef, {
+                    name: currentUser.displayName || currentUser.email.split('@')[0],
+                    clicks: increment(1),
+                    lastUpdated: new Date()
+                }, { merge: true });
             }
         }
 
-        // 監聽按鍵與點擊
+        function triggerBroken() {
+            isBroken = true;
+            brokenOverlay.style.display = 'flex';
+            imgElement.src = "https://github.com/091cc/pop-yang/blob/main/Unknown.jpg?raw=true";
+            unlockAchievement('broken_expert');
+        }
+
+        fixBtn.onclick = () => {
+            isBroken = false;
+            brokenOverlay.style.display = 'none';
+            imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg";
+        };
+
         const gameActions = {
             pressDown: (e) => {
-                if (e && e.repeat) return;
+                if (isBroken || (e && e.repeat)) return;
                 imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/3.jpg";
                 addPoint();
             },
             pressUp: () => { 
-                imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg"; 
+                if (!isBroken) imgElement.src = "https://raw.githubusercontent.com/091cc/pop-yang/main/1.jpg"; 
             }
         };
 
@@ -165,12 +246,10 @@
         window.addEventListener('keydown', (e) => { if(e.code === 'Space' || e.code === 'Enter') gameActions.pressDown(e); });
         window.addEventListener('keyup', (e) => { if(e.code === 'Space' || e.code === 'Enter') gameActions.pressUp(); });
 
-        // Firebase Auth 狀態與 UI 更新
         onAuthStateChanged(auth, async (user) => {
             currentUser = user;
             if (user) {
                 document.getElementById('open-auth-btn').textContent = `👤 ${user.displayName || user.email.split('@')[0]}`;
-                // 同步雲端分數
                 const userSnap = await getDoc(doc(db, "leaderboard", user.uid));
                 if (userSnap.exists()) {
                     count = userSnap.data().clicks || 0;
@@ -182,42 +261,39 @@
             }
         });
 
-        // 彈窗控制邏輯 (省略細節補全)
         document.getElementById('open-auth-btn').onclick = () => {
             if (currentUser) document.getElementById('user-menu-box').style.display = 'block';
             else document.getElementById('auth-box').style.display = 'block';
         };
-
         document.getElementById('google-login-btn').onclick = () => signInWithPopup(auth, provider).then(closeModals);
         document.getElementById('logout-btn').onclick = () => signOut(auth).then(closeModals);
+        document.getElementById('achievement-btn').onclick = () => {
+            document.getElementById('achievement-box').style.display = 'block';
+            renderAchievements();
+        };
         
-        // 排行榜邏輯
         document.getElementById('rank-btn').onclick = () => {
             document.getElementById('leaderboard-box').style.display = 'block';
             const q = query(collection(db, "leaderboard"), orderBy("clicks", "desc"), limit(5));
             onSnapshot(q, (snap) => {
                 const list = document.getElementById('rank-list');
                 list.innerHTML = '';
-                let index = 1;
+                let i = 1;
                 snap.forEach(d => {
                     const data = d.data();
-                    let prefix = index === 1 ? "🥇 " : index === 2 ? "🥈 " : index === 3 ? "🥉 " : `${index}. `;
-                    list.innerHTML += `<div class="rank-item"><span>${prefix}${data.name || 'Unknown'}</span><b>${data.clicks || 0}</b></div>`;
-                    index++;
+                    let medal = i === 1 ? "🥇 " : i === 2 ? "🥈 " : i === 3 ? "🥉 " : `${i}. `;
+                    list.innerHTML += `<div class="rank-item"><span>${medal}${data.name || 'Unknown'}</span><b>${data.clicks || 0}</b></div>`;
+                    i++;
                 });
             });
         };
 
-        // 語系跳轉
         document.getElementById('languages').onchange = function() {
-            const val = this.value;
             const baseUrl = 'https://091cc.github.io/pop-yang/';
-            window.location.href = val === 'en' ? baseUrl : `${baseUrl}${val}`;
+            window.location.href = this.value === 'en' ? baseUrl : baseUrl + this.value;
         };
 
-        // 關閉所有彈窗
         document.querySelectorAll('[id^="close-"]').forEach(btn => btn.onclick = closeModals);
-
     </script>
 </body>
 </html>
